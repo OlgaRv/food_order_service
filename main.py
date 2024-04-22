@@ -1,7 +1,7 @@
 import sqlite3
 
-def create_tables():
-    conn = sqlite3.connect('Users.db')
+def create_tables(users):
+    conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
 
     cur.execute('''
