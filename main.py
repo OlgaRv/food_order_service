@@ -10,3 +10,4 @@ cur.execute("""CREATE TABLE IF NOT EXISTS Status (
 conn.commit()
 conn.close()
 
+
