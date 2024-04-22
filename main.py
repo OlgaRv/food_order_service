@@ -1,10 +1,9 @@
 import sqlite3
 import telebot
 
-
-def create_db_and_table(db_name='category.db'):
+def create_db_and_table():
     # Создаём базу данных
-    conn = sqlite3.connect(db_name)
+    conn = sqlite3.connect('zero_order_service.db')
     cursor = conn.cursor()
 
     # Создаем таблицу
@@ -19,10 +18,9 @@ def create_db_and_table(db_name='category.db'):
     conn.commit()
     conn.close()
 
-
-def add_category(category_name, db_name='category.db'):
+def add_category(category_name):
     # Подключаемся к базе данных
-    conn = sqlite3.connect(db_name)
+    conn = sqlite3.connect('zero_order_service.db')
     cursor = conn.cursor()
 
     # Добавляем новую категорию
@@ -32,8 +30,8 @@ def add_category(category_name, db_name='category.db'):
     conn.commit()
     conn.close()
 
-    # Пример использования функций
-    create_db_and_table()  # Создаем базу данных и таблицу
-    add_category('Супы')  # Добавляем категорию 'Супы'
-    add_category('Гарниры')  # Добавляем категорию 'Гарниры'
+# Пример использования функций
+create_db_and_table()  # Создаем базу данных и таблицу
+add_category('Супы')  # Добавляем категорию 'Супы'
+add_category('Гарниры')  # Добавляем категорию 'Гарниры'
 
