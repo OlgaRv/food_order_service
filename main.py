@@ -1,6 +1,6 @@
 import sqlite3
 
-def create_tables(users):
+def create_table_users():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
 
@@ -20,5 +20,5 @@ def create_tables(users):
     conn.close()
 
 # Вызываем функцию
-create_tables()
+create_table_users()
 
