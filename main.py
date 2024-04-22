@@ -30,8 +30,21 @@ def add_category(category_name):
     conn.commit()
     conn.close()
 
+
+def create_table_status():
+    conn = sqlite3.connect("zero_order_service.db")
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS Status (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL)""")
+
+    conn.commit()
+    conn.close()
+
 # Пример использования функций
 create_db_and_table()  # Создаем базу данных и таблицу
+create_table_status()
 add_category('Супы')  # Добавляем категорию 'Супы'
 add_category('Гарниры')  # Добавляем категорию 'Гарниры'
+
 
