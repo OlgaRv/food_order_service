@@ -20,19 +20,22 @@ def create_db_and_table():
     finally:
         conn.close()
 
+def add_user(name, role=None):
+    # Если роль не указана, автоматически присваиваем роль "клиент"
+    if role is None:
+        role = 'клиент'
 
-def add_user(name, role):
     try:
         conn = sqlite3.connect('zero_order_service.db')
         cursor = conn.cursor()
 
         cursor.execute('INSERT INTO User_role (name, role) VALUES (?, ?)', (name, role))
         conn.commit()
+
     except sqlite3.Error as e:
         print(f"Ошибка при добавлении пользователя: {e}")
     finally:
         conn.close()
-
 
 def update_user_role(name, new_role):
     try:
@@ -58,6 +61,7 @@ create_db_and_table()
 add_user('Евгения', 'администратор')
 add_user('Наталья Иванова', 'повар')
 add_user('Степан', 'курьер')
+add_user('Михаил')  # Пример добавления клиента с автоматическим присвоением роли
 
 # Обновление роли пользователя (пример)
 update_user_role('Степан', 'менеджер')
