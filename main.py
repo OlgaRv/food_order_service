@@ -1,86 +1,64 @@
 import sqlite3
 
-def create_table_users():
-    conn = sqlite3.connect('zero_order_service.db')
-    cur = conn.cursor()
-
-    cur.execute('''
-    CREATE TABLE IF NOT EXISTS users
-    (id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    phone STRING,
-    address STRING,
-    sum_of_orders FLOAT,
-    discount FLOAT,
-    user_role INTEGER,
-    FOREIGN KEY(user_role) REFERENCES User_role(id))
-    ''')
-
-    conn.commit()
-    conn.close()
-
-# Вызываем функцию
-create_table_users()
-
 
 def create_db_and_table():
-    # Создаём базу данных
-    conn = sqlite3.connect('zero_order_service.db')
-    cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect('zero_order_service.db')
+        cursor = conn.cursor()
 
-    # Создаем таблицу
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Category_dishes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category_name TEXT NOT NULL
-        )
-    ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS User_role (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                role TEXT NOT NULL
+            )
+        ''')
 
-    # Закрываем соединение с базой данных
-    conn.commit()
-    conn.close()
-
-def add_category(category_name):
-    # Подключаемся к базе данных
-    conn = sqlite3.connect('zero_order_service.db')
-    cursor = conn.cursor()
-
-    # Добавляем новую категорию
-    cursor.execute('INSERT INTO Category_dishes (category_name) VALUES (?)', (category_name,))
-
-    # Сохраняем изменения и закрываем соединение
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Ошибка при создании таблицы: {e}")
+    finally:
+        conn.close()
 
 
-def create_table_status():
-    conn = sqlite3.connect("zero_order_service.db")
-    cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS Status (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT NOT NULL)""")
+def add_user(name, role):
+    try:
+        conn = sqlite3.connect('zero_order_service.db')
+        cursor = conn.cursor()
 
-    conn.commit()
-    conn.close()
-
-def add_order_status(name):
-    conn = sqlite3.connect("zero_order_service.db")
-    cur = conn.cursor()
-    cur.execute("insert into create_table_status(name), value(?,)", (name))
-    conn.commit()
-    conn.close()
-
-# Пример использования функций
-create_db_and_table()  # Создаем базу данных и таблицу
-create_table_status()
-add_category('Супы')  # Добавляем категорию 'Супы'
-add_category('Гарниры')  # Добавляем категорию 'Гарниры'
-add_order_status("Новый")
-add_order_status("В работе")
-add_order_status("На доставку")
-add_order_status("Доставлен")
-add_order_status("Оплачен")
+        cursor.execute('INSERT INTO User_role (name, role) VALUES (?, ?)', (name, role))
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Ошибка при добавлении пользователя: {e}")
+    finally:
+        conn.close()
 
 
+def update_user_role(name, new_role):
+    try:
+        conn = sqlite3.connect('zero_order_service.db')
+        cursor = conn.cursor()
 
+        cursor.execute('UPDATE User_role SET role = ? WHERE name = ?', (new_role, name))
+        if cursor.rowcount == 0:
+            print("Пользователь не найден.")
+        else:
+            print("Роль успешно обновлена.")
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Ошибка при обновлении роли пользователя: {e}")
+    finally:
+        conn.close()
+
+
+# Инициализация базы данных и таблицы
+create_db_and_table()
+
+# Добавление пользователей и их ролей
+add_user('Евгения', 'администратор')
+add_user('Наталья Иванова', 'повар')
+add_user('Степан', 'курьер')
+
+# Обновление роли пользователя (пример)
+update_user_role('Степан', 'менеджер')
 
