@@ -112,3 +112,13 @@ def create_table_users():
         # Закрываем соединение с базой данных
         conn.commit()
         conn.close()
+
+def add_category(category_name):    # Подключаемся к базе данных
+    conn = sqlite3.connect('zero_order_service.db')
+    cursor = conn.cursor()
+
+    # Добавляем новую категорию
+    cursor.execute('INSERT INTO Category (category_name) VALUES (?)', (category_name,))
+    # Сохраняем изменения и закрываем соединение
+    conn.commit()
+    conn.close()
