@@ -73,13 +73,14 @@ def create_table_dishes():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
 
-    cur.execute('''
-    CREATE TABLE IF NOT EXISTS dishes
-    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cur.execute(''' 
+    CREATE TABLE IF NOT EXISTS dishes(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     price INTEGER CHECK (price >= 0),
     image TEXT,
-    FOREIGN KEY(category_id) REFERENCES Category(id))
+    category_id INTEGER,
+    FOREIGN KEY (category_id) REFERENCES Category(id))
     ''')
 
     conn.commit()
@@ -144,10 +145,19 @@ def create_table_orders():
     cur.execute('''
     CREATE TABLE IF NOT EXISTS orders
     (id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
     sum FLOAT CHECK (Sum >= 0),
+    status_id INTEGER NOT NULL,
     FOREIGN KEY(user_id) REFERENCES Users(id),
     FOREIGN KEY(status_id) REFERENCES Status(id))
     ''')
 
     conn.commit()
     conn.close()
+
+create_db_and_table()
+create_table_users()
+create_table_category()
+create_table_status()
+create_table_dishes()
+create_table_orders()
