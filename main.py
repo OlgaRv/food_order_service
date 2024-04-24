@@ -137,7 +137,6 @@ def add_order_status(name):
     cur.execute("insert into Status(name), value(?,)", (name))
     conn.commit()
     conn.close()
-
 def create_table_orders():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
