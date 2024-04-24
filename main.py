@@ -82,5 +82,25 @@ add_order_status("Доставлен")
 add_order_status("Оплачен")
 
 
+def create_table_orders():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS orders
+    (id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    sum FLOAT CHECK (Sum >= 0),
+    status_id INTEGER NOT NULL,
+    FOREIGN KEY(user_id) REFERENCES Users(id),
+    FOREIGN KEY(status_id) REFERENCES Order_status(id))
+    ''')
+
+    conn.commit()
+    conn.close()
+
+# Вызываем функцию
+create_table_orders()
+
 
 
