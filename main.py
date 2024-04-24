@@ -84,3 +84,4 @@ def create_table_dishes():
 
     conn.commit()
     conn.close()
+
