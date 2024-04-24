@@ -137,3 +137,18 @@ def add_order_status(name):
     cur.execute("insert into Status(name), value(?,)", (name))
     conn.commit()
     conn.close()
+
+def create_table_orders():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS orders
+    (id INTEGER PRIMARY KEY,
+    sum FLOAT CHECK (Sum >= 0),
+    FOREIGN KEY(user_id) REFERENCES Users(id),
+    FOREIGN KEY(status_id) REFERENCES Status(id))
+    ''')
+
+    conn.commit()
+    conn.close()
