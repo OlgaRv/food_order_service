@@ -151,3 +151,22 @@ def create_table_orders():
 
     conn.commit()
     conn.close()
+
+def create_table_order_position():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS order_positions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL,
+            dishes_id INTEGER NOT NULL,  
+            count INT DEFAULT 1,
+            temp_sum FLOAT CHECK (temp_sum >= 0), 
+            FOREIGN KEY(order_id) REFERENCES orders(id),
+            FOREIGN KEY(dishes_id) REFERENCES dishes(id) 
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
