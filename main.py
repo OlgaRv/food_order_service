@@ -57,11 +57,33 @@ def update_user_role(name, new_role):
 # Инициализация базы данных и таблицы
 create_db_and_table()
 
+
 # Добавление пользователей и их ролей
 add_user('Евгения', 'администратор')
 add_user('Наталья Иванова', 'повар')
 add_user('Степан', 'курьер')
 add_user('Михаил')  # Пример добавления клиента с автоматическим присвоением роли
+
+def create_table_orders():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS orders
+    (id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    sum FLOAT CHECK (Sum >= 0),
+    status_id INTEGER NOT NULL,
+    FOREIGN KEY(user_id) REFERENCES Users(id),
+    FOREIGN KEY(status_id) REFERENCES Order_status(id))
+    ''')
+
+    conn.commit()
+    conn.close()
+
+# Вызываем функцию
+create_table_orders()
+
 
 # Обновление роли пользователя (пример)
 update_user_role('Степан', 'менеджер')
