@@ -71,7 +71,9 @@ def create_table_orders():
     cur.execute('''
     CREATE TABLE IF NOT EXISTS orders
     (id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
     sum FLOAT CHECK (Sum >= 0),
+    status_id INTEGER NOT NULL,
     FOREIGN KEY(user_id) REFERENCES Users(id),
     FOREIGN KEY(status_id) REFERENCES Order_status(id))
     ''')
@@ -81,6 +83,7 @@ def create_table_orders():
 
 # Вызываем функцию
 create_table_orders()
+
 
 # Обновление роли пользователя (пример)
 update_user_role('Степан', 'менеджер')
