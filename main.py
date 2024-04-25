@@ -43,7 +43,7 @@ def update_user_role(name, new_role):
         conn = sqlite3.connect('zero_order_service.db')
         cursor = conn.cursor()
 
-        cursor.execute('UPDATE User SET role = ? WHERE name = ?', (new_role, name))
+        cursor.execute('UPDATE Users SET role = ? WHERE name = ?', (new_role, name))
         if cursor.rowcount == 0:
             print("Пользователь не найден.")
         else:
