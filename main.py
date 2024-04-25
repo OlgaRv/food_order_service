@@ -29,20 +29,21 @@ def add_user(name, role=None):
         conn = sqlite3.connect('zero_order_service.db')
         cursor = conn.cursor()
 
-        cursor.execute('INSERT INTO User_role (name, role) VALUES (?, ?)', (name, role))
+        cursor.execute('INSERT INTO Users (name, user_role) VALUES (?, ?)', (name, role))
         conn.commit()
-
+        conn.close()
     except sqlite3.Error as e:
         print(f"Ошибка при добавлении пользователя: {e}")
-    finally:
-        conn.close()
+    #finally:
+
+
 
 def update_user_role(name, new_role):
     try:
         conn = sqlite3.connect('zero_order_service.db')
         cursor = conn.cursor()
 
-        cursor.execute('UPDATE User_role SET role = ? WHERE name = ?', (new_role, name))
+        cursor.execute('UPDATE Users SET role = ? WHERE name = ?', (new_role, name))
         if cursor.rowcount == 0:
             print("Пользователь не найден.")
         else:
@@ -136,12 +137,44 @@ def create_table_status():
                     name TEXT NOT NULL)''')
     conn.commit()
     conn.close()
-def add_order_status(name):
-    conn = sqlite3.connect("zero_order_service.db")
+def add_order_status():
+    conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
-    cur.execute("INSERT INTO order_status (name) VALUES (?)", (name,))
+
+    cur.execute("Select * From order_status where name=?",('Новый',))
+    check1 = cur.fetchone()
+    if not check1:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("Новый",))
+
+    cur.execute("Select * From order_status where name=?", ('В работу',))
+    check2 = cur.fetchone()
+    if not check2:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("В работу",))
+
+    cur.execute("Select * From order_status where name=?",('На доставку',))
+    check3 = cur.fetchone()
+    if not check3:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("На доставку",))
+
+    cur.execute("Select * From order_status where name=?",('Доставлен',))
+    check4 = cur.fetchone()
+    if not check4:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("Доставлен",))
+
+    cur.execute("Select * From order_status where name=?",('Оплачен',))
+    check4 = cur.fetchone()
+    if not check4:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("Оплачен",))
+
     conn.commit()
     conn.close()
+
+
 def create_table_orders():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
@@ -187,6 +220,94 @@ def add_dishes(Category, name, price, image):
     conn.commit()
     conn.close()
 
+def add_user_role():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute("Select * From user_role where name='Админ'")
+    check1 = cur.fetchone()
+    if not check1:
+        cur.execute("insert into user_role (name, role) values(?,?)",
+                ("Админ","Админ"))
+
+    cur.execute("Select * From user_role where name='Повар'")
+    check2 = cur.fetchone()
+    if not check2:
+        cur.execute("insert into user_role (name, role) values(?,?)",
+                ("Повар","Повар"))
+
+    cur.execute("Select * From user_role where name='Доставщик'")
+    check3 = cur.fetchone()
+    if not check3:
+        cur.execute("insert into user_role (name, role) values(?,?)",
+                ("Доставщик","Доставщик"))
+
+    cur.execute("Select * From user_role where name='Клиент'")
+    check4 = cur.fetchone()
+    if not check4:
+        cur.execute("insert into user_role (name, role) values(?,?)",
+                ("Клиент","Клиент"))
+
+    conn.commit()
+    conn.close()
+
+def user_change(user_name, phone, address):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('Select * From Users where name = ?',(user_name,))
+    check1 = cur.fetchone()
+    if check1:
+        cur.execute("UPDATE Users SET phone = ?, address = ? WHERE name = ?", (phone, address, user_name))
+    conn.commit()
+    conn.close()
+
+def add_order(user_name):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('Select id From order_status where name=?', ("Новый",))
+    check2 = cur.fetchone()
+    if check2:
+        check2 = check2[0]
+    else:
+        print("Нет такого статуса")
+
+
+    cur.execute('Select id From Users where name=?',(user_name,))
+    check1 = cur.fetchone()
+    if check1:
+        check1 = check1[0]
+    else:
+        print("Нет такого юзера")
+
+    if check1 and check2:
+        cur.execute("INSERT INTO orders (user_id, status_id) VALUES (?, ?)",
+                    (check1, check2))
+        order_id = cur.lastrowid  # Получение ID нового заказа
+        conn.commit()
+        print(f"Заказ добавлен. ID нового заказа: {order_id}")
+        return order_id
+
+    else:
+        print("Не удалось добавить заказ: отсутствует ID пользователя или статуса.")
+    #conn.commit()
+    conn.close()
+
+def add_order_position(order_id, dishes_id, count):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute("Select price From dishes Where id = ?",(dishes_id,))
+    price1 = cur.fetchone()
+    if price1:
+        price1 = price1[0]
+    temp_sum = price1*count
+    cur.execute("insert into order_positions (order_id, dishes_id, count, temp_sum) values(?,?,?,?)",
+                (order_id, dishes_id, count, temp_sum))
+    conn.commit()
+    conn.close()
+
+
 create_db_and_table()
 create_table_users()
 create_table_category()
@@ -194,10 +315,20 @@ create_table_status()
 create_table_dishes()
 create_table_orders()
 create_table_order_position()
+add_user_role()
 
 Category = 1
 name = "еда1"
 price = 100
 image = "ссылка на рисунок"
 
-add_dishes(Category, name, price, image)
+#add_dishes(Category, name, price, image)
+
+user_name = "@Kvitov_Evgeny"
+phone = '89997776655'
+address = 'tyumen'
+
+#user_change(user_name, phone, address)
+order_id = add_order(user_name)
+
+add_order_position(order_id,1,2)
