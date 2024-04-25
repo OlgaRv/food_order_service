@@ -284,14 +284,28 @@ def add_order(user_name):
     if check1 and check2:
         cur.execute("INSERT INTO orders (user_id, status_id) VALUES (?, ?)",
                     (check1, check2))
+        order_id = cur.lastrowid  # Получение ID нового заказа
         conn.commit()
-        conn.close()
-        print("Заказ добавлен.")
+        print(f"Заказ добавлен. ID нового заказа: {order_id}")
+        return order_id
+
     else:
         print("Не удалось добавить заказ: отсутствует ID пользователя или статуса.")
     #conn.commit()
     conn.close()
 
+def add_order_position(order_id, dishes_id, count):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute("Select price From dishes Where id = ?",(dishes_id,))
+    price1 = cur.fetchone()
+    if price1:
+        price1 = price1[0]
+    temp_sum = price1*count
+    cur.execute("insert into order_positions (order_id, dishes_id, count, temp_sum) values(?,?,?,?)",
+                (order_id, dishes_id, count, temp_sum))
+    conn.commit()
+    conn.close()
 
 
 create_db_and_table()
@@ -315,4 +329,6 @@ phone = '89997776655'
 address = 'tyumen'
 
 #user_change(user_name, phone, address)
-add_order(user_name)
+order_id = add_order(user_name)
+
+add_order_position(order_id,1,2)
