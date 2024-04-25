@@ -262,6 +262,38 @@ def user_change(user_name, phone, address):
     conn.commit()
     conn.close()
 
+def add_order(user_name):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('Select id From order_status where name=?', ("Новый",))
+    check2 = cur.fetchone()
+    if check2:
+        check2 = check2[0]
+    else:
+        print("Нет такого статуса")
+
+
+    cur.execute('Select id From Users where name=?',(user_name,))
+    check1 = cur.fetchone()
+    if check1:
+        check1 = check1[0]
+    else:
+        print("Нет такого юзера")
+
+    if check1 and check2:
+        cur.execute("INSERT INTO orders (user_id, status_id) VALUES (?, ?)",
+                    (check1, check2))
+        conn.commit()
+        conn.close()
+        print("Заказ добавлен.")
+    else:
+        print("Не удалось добавить заказ: отсутствует ID пользователя или статуса.")
+    #conn.commit()
+    conn.close()
+
+
+
 create_db_and_table()
 create_table_users()
 create_table_category()
@@ -283,4 +315,4 @@ phone = '89997776655'
 address = 'tyumen'
 
 #user_change(user_name, phone, address)
-add_order_status()
+add_order(user_name)
