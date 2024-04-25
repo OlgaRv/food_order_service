@@ -219,6 +219,17 @@ def add_user_role():
     conn.commit()
     conn.close()
 
+def user_change(user_name, phone, address):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('Select * From Users where name = ?',(user_name,))
+    check1 = cur.fetchone()
+    if check1:
+        cur.execute("UPDATE Users SET phone = ?, address = ? WHERE name = ?", (phone, address, user_name))
+    conn.commit()
+    conn.close()
+
 create_db_and_table()
 create_table_users()
 create_table_category()
@@ -236,4 +247,7 @@ image = "ссылка на рисунок"
 #add_dishes(Category, name, price, image)
 
 user_name = "@Kvitov_Evgeny"
-add_user(user_name, role=None)
+phone = '89997776655'
+address = 'tyumen'
+
+#user_change(user_name, phone, address)
