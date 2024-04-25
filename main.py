@@ -54,20 +54,20 @@ def update_user_role(name, new_role):
         conn.close()
 
 
-def create_table_orders():
-    conn = sqlite3.connect('zero_order_service.db')
-    cur = conn.cursor()
-
-    cur.execute('''
-    CREATE TABLE IF NOT EXISTS orders
-    (id INTEGER PRIMARY KEY,
-    sum FLOAT CHECK (Sum >= 0),
-    FOREIGN KEY(user_id) REFERENCES Users(id),
-    FOREIGN KEY(status_id) REFERENCES Order_status(id))
-    ''')
-
-    conn.commit()
-    conn.close()
+# def create_table_orders():
+#     conn = sqlite3.connect('zero_order_service.db')
+#     cur = conn.cursor()
+#
+#     cur.execute('''
+#     CREATE TABLE IF NOT EXISTS orders
+#     (id INTEGER PRIMARY KEY  AUTOINCREMENT,
+#     sum FLOAT CHECK (Sum >= 0),
+#     FOREIGN KEY(user_id) REFERENCES Users(id),
+#     FOREIGN KEY(status_id) REFERENCES Order_status(id))
+#     ''')
+#
+#     conn.commit()
+#     conn.close()
 
 def create_table_dishes():
     conn = sqlite3.connect('zero_order_service.db')
@@ -80,7 +80,7 @@ def create_table_dishes():
     price INTEGER CHECK (price >= 0),
     image TEXT,
     category_id INTEGER,
-    FOREIGN KEY (category_id) REFERENCES Category(id))
+    FOREIGN KEY (category_id) REFERENCES Category_dishes(id))
     ''')
 
     conn.commit()
@@ -89,13 +89,17 @@ def create_table_dishes():
 def create_table_users():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
-    cur.execute('''    CREATE TABLE IF NOT EXISTS Users
-    (id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    phone STRING,    address STRING,
-    sum_of_orders FLOAT,    discount FLOAT,
-    user_role INTEGER,
-    FOREIGN KEY(user_role) REFERENCES User_role(id))
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS Users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        address TEXT,
+        sum_of_orders FLOAT,
+        discount FLOAT,
+        user_role INTEGER,
+        FOREIGN KEY(user_role) REFERENCES User_role(id)
+    )
     ''')
     conn.commit()
     conn.close()
@@ -127,9 +131,9 @@ def add_category(category_name):    # Подключаемся к базе да�
 def create_table_status():
     conn = sqlite3.connect("zero_order_service.db")
     cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS order_status
+    cur.execute('''CREATE TABLE IF NOT EXISTS order_status
                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL)""")
+                    name TEXT NOT NULL)''')
     conn.commit()
     conn.close()
 def add_order_status(name):
@@ -144,7 +148,7 @@ def create_table_orders():
 
     cur.execute('''
     CREATE TABLE IF NOT EXISTS orders
-    (id INTEGER PRIMARY KEY,
+    (id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     sum FLOAT CHECK (Sum >= 0),
     status_id INTEGER NOT NULL,
