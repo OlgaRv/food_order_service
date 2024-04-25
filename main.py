@@ -137,12 +137,44 @@ def create_table_status():
                     name TEXT NOT NULL)''')
     conn.commit()
     conn.close()
-def add_order_status(name):
-    conn = sqlite3.connect("zero_order_service.db")
+def add_order_status():
+    conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
-    cur.execute("insert into order_status(name), value(?,)", (name))
+
+    cur.execute("Select * From order_status where name=?",('Новый',))
+    check1 = cur.fetchone()
+    if not check1:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("Новый",))
+
+    cur.execute("Select * From order_status where name=?", ('В работу',))
+    check2 = cur.fetchone()
+    if not check2:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("В работу",))
+
+    cur.execute("Select * From order_status where name=?",('На доставку',))
+    check3 = cur.fetchone()
+    if not check3:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("На доставку",))
+
+    cur.execute("Select * From order_status where name=?",('Доставлен',))
+    check4 = cur.fetchone()
+    if not check4:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("Доставлен",))
+
+    cur.execute("Select * From order_status where name=?",('Оплачен',))
+    check4 = cur.fetchone()
+    if not check4:
+        cur.execute("insert into order_status (name) values(?)",
+                    ("Оплачен",))
+
     conn.commit()
     conn.close()
+
+
 def create_table_orders():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
@@ -251,3 +283,4 @@ phone = '89997776655'
 address = 'tyumen'
 
 #user_change(user_name, phone, address)
+add_order_status()
