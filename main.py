@@ -127,9 +127,9 @@ def add_category(category_name):    # Подключаемся к базе да�
 def create_table_status():
     conn = sqlite3.connect("zero_order_service.db")
     cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS order_status
+    cur.execute('''CREATE TABLE IF NOT EXISTS order_status
                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL)""")
+                    name TEXT NOT NULL)''')
     conn.commit()
     conn.close()
 def add_order_status(name):
