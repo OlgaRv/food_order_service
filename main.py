@@ -89,7 +89,7 @@ def create_table_dishes():
 def create_table_users():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
-    cur.execute('''    CREATE TABLE IF NOT EXISTS users
+    cur.execute('''    CREATE TABLE IF NOT EXISTS Users
     (id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     phone STRING,    address STRING,
@@ -106,7 +106,7 @@ def create_table_category():
     cursor = conn.cursor()
     # Создаем таблицу
     cursor.execute('''
-            CREATE TABLE IF NOT EXISTS Category(
+            CREATE TABLE IF NOT EXISTS Category_dishes(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category_name TEXT NOT NULL)
             ''')
@@ -119,7 +119,7 @@ def add_category(category_name):    # Подключаемся к базе да�
     cursor = conn.cursor()
 
     # Добавляем новую категорию
-    cursor.execute('INSERT INTO Category (category_name) VALUES (?)', (category_name,))
+    cursor.execute('INSERT INTO Category_dishes (category_name) VALUES (?)', (category_name,))
     # Сохраняем изменения и закрываем соединение
     conn.commit()
     conn.close()
@@ -127,7 +127,7 @@ def add_category(category_name):    # Подключаемся к базе да�
 def create_table_status():
     conn = sqlite3.connect("zero_order_service.db")
     cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS Status
+    cur.execute("""CREATE TABLE IF NOT EXISTS order_status
                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL)""")
     conn.commit()
@@ -135,7 +135,7 @@ def create_table_status():
 def add_order_status(name):
     conn = sqlite3.connect("zero_order_service.db")
     cur = conn.cursor()
-    cur.execute("insert into Status(name), value(?,)", (name))
+    cur.execute("insert into order_status(name), value(?,)", (name))
     conn.commit()
     conn.close()
 def create_table_orders():
@@ -149,7 +149,7 @@ def create_table_orders():
     sum FLOAT CHECK (Sum >= 0),
     status_id INTEGER NOT NULL,
     FOREIGN KEY(user_id) REFERENCES Users(id),
-    FOREIGN KEY(status_id) REFERENCES Status(id))
+    FOREIGN KEY(status_id) REFERENCES order_status(id))
     ''')
 
     conn.commit()
@@ -174,6 +174,14 @@ def create_table_order_position():
 
     conn.commit()
     conn.close()
+def add_dishes(Category, name, price, image):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute("insert into dishes(category_id, name, price, image) values(?,?,?,?)",
+                (Category,name,price,image))
+    conn.commit()
+    conn.close()
 
 create_db_and_table()
 create_table_users()
@@ -183,3 +191,9 @@ create_table_dishes()
 create_table_orders()
 create_table_order_position()
 
+Category = 1
+name = "еда1"
+price = 100
+image = "ссылка на рисунок"
+
+add_dishes(Category, name, price, image)
