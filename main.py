@@ -314,6 +314,39 @@ def add_order_position(order_id, dishes_id, count):
     conn.commit()
     conn.close()
 
+# создание таблицы отзывов о блюде
+def create_table_feedback():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS feedback 
+        (id INTEGER PRIMARY KEY, 
+        dishes INTEGER NOT NULL, 
+        user INTEGER NOT NULL, 
+        content TEXT NOT NULL, 
+        raiting INTEGER, 
+        FOREIGN KEY(user) REFERENCES (user.id) 
+        FOREIGN KEY(dishes) REFERENCES (dishes.id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def add_feedback(dishes, user, content):
+    rating = get_rating()
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute("INSERT INTO feedback (dishes, user, content, rating) VALUES (?, ?, ?, ?)", (dishes, user, content, rating))
+    conn.commit()
+    conn.close()
+
+def get_rating():
+    while True:
+        rating = input("Введите рейтинг от 1 до 5: ")
+        if rating.isdigit() and 1 <= int(rating) <= 5:
+            return int(rating)
+        else:
+            print("Неверный ввод. Пожалуйста, введите число от 1 до 5.")
 
 
 # Подключение к базе данных
