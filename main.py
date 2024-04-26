@@ -55,20 +55,22 @@ def update_user_role(name, new_role):
         conn.close()
 
 
-# def create_table_orders():
-#     conn = sqlite3.connect('zero_order_service.db')
-#     cur = conn.cursor()
-#
-#     cur.execute('''
-#     CREATE TABLE IF NOT EXISTS orders
-#     (id INTEGER PRIMARY KEY  AUTOINCREMENT,
-#     sum FLOAT CHECK (Sum >= 0),
-#     FOREIGN KEY(user_id) REFERENCES Users(id),
-#     FOREIGN KEY(status_id) REFERENCES Order_status(id))
-#     ''')
-#
-#     conn.commit()
-#     conn.close()
+def create_table_orders():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS orders
+    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sum FLOAT CHECK (sum >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES Users(id),
+    FOREIGN KEY(status_id) REFERENCES Order_status(id))
+    ''')
+
+    conn.commit()
+    conn.close()
+
 
 def create_table_dishes():
     conn = sqlite3.connect('zero_order_service.db')
