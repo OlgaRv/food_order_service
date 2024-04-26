@@ -60,21 +60,21 @@ def update_user_role(name, new_role):
         conn.close()
 
 
-def create_table_orders():
-    conn = sqlite3.connect('zero_order_service.db')
-    cur = conn.cursor()
-
-    cur.execute('''
-    CREATE TABLE IF NOT EXISTS orders
-    (id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sum FLOAT CHECK (sum >= 0),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES Users(id),
-    FOREIGN KEY(status_id) REFERENCES Order_status(id))
-    ''')
-
-    conn.commit()
-    conn.close()
+# def create_table_orders():
+#     conn = sqlite3.connect('zero_order_service.db')
+#     cur = conn.cursor()
+#
+#     cur.execute('''
+#     CREATE TABLE IF NOT EXISTS orders
+#     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+#     sum FLOAT CHECK (sum >= 0),
+#     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#     FOREIGN KEY(user_id) REFERENCES Users(id),
+#     FOREIGN KEY(status_id) REFERENCES Order_status(id))
+#     ''')
+#
+#     conn.commit()
+#     conn.close()
 
 
 def create_table_dishes():
@@ -192,6 +192,7 @@ def create_table_orders():
     user_id INTEGER NOT NULL,
     sum FLOAT CHECK (Sum >= 0),
     status_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES Users(id),
     FOREIGN KEY(status_id) REFERENCES order_status(id))
     ''')
@@ -320,13 +321,13 @@ def create_table_feedback():
     cur = conn.cursor()
     cur.execute('''
     CREATE TABLE IF NOT EXISTS feedback 
-        (id INTEGER PRIMARY KEY, 
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, 
         dishes INTEGER NOT NULL, 
         user INTEGER NOT NULL, 
         content TEXT NOT NULL, 
-        raiting INTEGER, 
-        FOREIGN KEY(user) REFERENCES (user.id) 
-        FOREIGN KEY(dishes) REFERENCES (dishes.id)
+        rating INTEGER, 
+        FOREIGN KEY(user) REFERENCES Users(id) 
+        FOREIGN KEY(dishes) REFERENCES dishes(id)
         )
     ''')
     conn.commit()
@@ -419,6 +420,7 @@ create_table_status()
 create_table_dishes()
 create_table_orders()
 create_table_order_position()
+create_table_feedback()
 add_user_role()
 
 Category = 1
