@@ -314,8 +314,8 @@ def create_table_feedback():
     cur.execute('''
     CREATE TABLE IF NOT EXISTS feedback 
         (id INTEGER PRIMARY KEY, 
-        dishes TEXT NOT NULL, 
-        user TEXT NOT NULL, 
+        dishes INTEGER NOT NULL, 
+        user INTEGER NOT NULL, 
         content TEXT NOT NULL, 
         raiting INTEGER, 
         FOREIGN KEY(user) REFERENCES (user.id) 
