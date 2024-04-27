@@ -36,8 +36,6 @@ def add_user(name, role=None):
         print(f"Ошибка при добавлении пользователя: {e}")
     #finally:
 
-
-
 def update_user_role(name, new_role):
     try:
         conn = sqlite3.connect('zero_order_service.db')
@@ -174,7 +172,6 @@ def add_order_status():
     conn.commit()
     conn.close()
 
-
 def create_table_orders():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
@@ -191,7 +188,6 @@ def create_table_orders():
 
     conn.commit()
     conn.close()
-
 
 def create_table_order_position():
     conn = sqlite3.connect('zero_order_service.db')
