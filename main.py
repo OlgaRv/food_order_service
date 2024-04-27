@@ -94,6 +94,47 @@ def create_table_dishes():
     conn.commit()
     conn.close()
 
+    def update_table_dishes(dishes_id, category_id=None, name=None, price=None, image=None):
+        conn = sqlite3.connect('zero_order_service.db')
+        cur = conn.cursor()
+
+        # Создаем строку запроса с динамическим обновлением только тех полей, которые предоставлены
+        update_query = "UPDATE dishes SET "
+        update_values = []
+
+        if category_id is not None:
+            update_query += "category_id = ?, "
+            update_values.append(category_id)
+        if name is not None:
+            update_query += "name = ?, "
+            update_values.append(name)
+        if price is not None:
+            update_query += "price = ?, "
+            update_values.append(price)
+        if image is not None:
+            update_query += "image = ?, "
+            update_values.append(image)
+
+        # Проверяем, были ли добавлены поля в запрос обновления
+        if not update_values:
+            print("Обновления не предоставлены.")
+            return
+
+        # Удаляем последнюю запятую и пробел из update_query
+        update_query = update_query.rstrip(', ')
+        update_query += " WHERE id = ?"
+        update_values.append(dishes_id)
+
+        # Выполняем обновление
+        cur.execute(update_query, update_values)
+        conn.commit()
+        conn.close()
+        print("Информация о блюде обновлена успешно.")
+
+# Пример использования:
+# update_dishes(1, category_id=2, name='Обновленное название', price=15.99, image='new_image.jpg')
+
+
 def create_table_users():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
