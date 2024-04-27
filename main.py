@@ -41,8 +41,6 @@ def add_user(name, role=None):
         print(f"Ошибка при добавлении пользователя: {e}")
     #finally:
 
-
-
 def update_user_role(name, new_role):
     try:
         conn = sqlite3.connect('zero_order_service.db')
@@ -222,7 +220,6 @@ def add_order_status():
     conn.commit()
     conn.close()
 
-
 def create_table_orders():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
@@ -240,7 +237,6 @@ def create_table_orders():
 
     conn.commit()
     conn.close()
-
 
 def create_table_order_position():
     conn = sqlite3.connect('zero_order_service.db')
@@ -480,5 +476,50 @@ order_id = add_order(user_name)
 
 add_order_position(order_id,1,2)
 
+def delete_order_position(order_position_id, db_name='database.db'):
+    try:
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        # Удаляем запись из таблицы Order_position по id
+        cursor.execute('DELETE FROM Order_position WHERE id = ?', (order_position_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            print("Запись не найдена.")
+        else:
+            print("Запись успешно удалена.")
+    except sqlite3.Error as e:
+        print(f"Ошибка при удалении записи: {e}")
+    finally:
+        conn.close()
+
+
+def update_order_position(order_position_id, quantity, db_name='database.db'):
+    try:
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        # Обновляем количество в позиции заказа
+        cursor.execute('UPDATE Order_position SET quantity = ? WHERE id = ?', (quantity, order_position_id))
+        conn.commit()
+        if cursor.rowcount == 0:
+            print("Запись не найдена.")
+        else:
+            print("Количество успешно обновлено.")
+    except sqlite3.Error as e:
+        print(f"Ошибка при обновлении записи: {e}")
+    finally:
+        conn.close()
+
+
+def manage_order_position(order_position_id):
+    action = input("Введите 'удалить' для удаления позиции или 'изменить' для изменения количества: ").strip().lower()
+    if action == 'удалить':
+        delete_order_position(order_position_id)
+    elif action == 'изменить':
+        quantity = int(input("Введите новое количество: "))
+        update_order_position(order_position_id, quantity)
+    else:
+        print("Некорректный ввод. Пожалуйста, введите 'удалить' или 'изменить'.")
 # Запуск бота
 bot.polling(none_stop=True)
