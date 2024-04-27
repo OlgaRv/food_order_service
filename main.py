@@ -25,23 +25,40 @@ def create_db_and_table():
     finally:
         conn.close()
 
-def add_user(name, role=None):
-    # Если роль не указана, автоматически присваиваем роль "клиент"
+# def add_user(name, role=None):
+#     # Если роль не указана, автоматически присваиваем роль "клиент"
+#     if role is None:
+#         role = 'клиент'
+#
+#     try:
+#         conn = sqlite3.connect('zero_order_service.db')
+#         cursor = conn.cursor()
+#
+#         cursor.execute('INSERT INTO Users (name, user_role) VALUES (?, ?)', (name, role))
+#         conn.commit()
+#         conn.close()
+#     except sqlite3.Error as e:
+#         print(f"Ошибка при добавлении пользователя: {e}")
+#     #finally:
+
+def add_user(user_id, name, role=None):
     if role is None:
         role = 'клиент'
-
     try:
         conn = sqlite3.connect('zero_order_service.db')
         cursor = conn.cursor()
-
-        cursor.execute('INSERT INTO Users (name, user_role) VALUES (?, ?)', (name, role))
-        conn.commit()
-        conn.close()
+        # Проверка наличия пользователя в базе
+        cursor.execute('SELECT * FROM Users WHERE user_id=?', (user_id,))
+        if cursor.fetchone() is None:
+            cursor.execute('INSERT INTO Users (user_id, name, user_role) VALUES (?, ?, ?)', (user_id, name, role))
+            conn.commit()
+            print("Пользователь успешно добавлен")
+        else:
+            print("Пользователь уже существует")
     except sqlite3.Error as e:
         print(f"Ошибка при добавлении пользователя: {e}")
-    #finally:
-
-
+    finally:
+        conn.close()
 
 def update_user_role(name, new_role):
     try:
@@ -94,6 +111,47 @@ def create_table_dishes():
     conn.commit()
     conn.close()
 
+def update_table_dishes(dishes_id, category_id=None, name=None, price=None, image=None):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    # Создаем строку запроса с динамическим обновлением только тех полей, которые предоставлены
+    update_query = "UPDATE dishes SET "
+    update_values = []
+
+    if category_id is not None:
+        update_query += "category_id = ?, "
+        update_values.append(category_id)
+    if name is not None:
+        update_query += "name = ?, "
+        update_values.append(name)
+    if price is not None:
+        update_query += "price = ?, "
+        update_values.append(price)
+    if image is not None:
+        update_query += "image = ?, "
+        update_values.append(image)
+
+        # Проверяем, были ли добавлены поля в запрос обновления
+    if not update_values:
+        print("Обновления не предоставлены.")
+        return
+
+    # Удаляем последнюю запятую и пробел из update_query
+    update_query = update_query.rstrip(', ')
+    update_query += " WHERE id = ?"
+    update_values.append(dishes_id)
+
+    # Выполняем обновление
+    cur.execute(update_query, update_values)
+    conn.commit()
+    conn.close()
+    print("Информация о блюде обновлена успешно.")
+
+# Пример использования:
+# update_dishes(1, category_id=2, name='Обновленное название', price=15.99, image='new_image.jpg')
+
+
 def create_table_users():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
@@ -106,6 +164,7 @@ def create_table_users():
         sum_of_orders FLOAT,
         discount FLOAT,
         user_role INTEGER,
+        user_id INTEGER,
         FOREIGN KEY(user_role) REFERENCES User_role(id)
     )
     ''')
@@ -181,7 +240,6 @@ def add_order_status():
     conn.commit()
     conn.close()
 
-
 def create_table_orders():
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
@@ -199,7 +257,6 @@ def create_table_orders():
 
     conn.commit()
     conn.close()
-
 
 def create_table_order_position():
     conn = sqlite3.connect('zero_order_service.db')
@@ -368,6 +425,11 @@ def get_categories():
 # Обработка команды start
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+    user_id = message.from_user.id
+    user_name = message.from_user.full_name  # Получаем имя пользователя из данных Telegram
+    # Регистрируем пользователя
+    add_user(user_id, user_name)
+
     markup = types.InlineKeyboardMarkup()
     itembtn1 = types.InlineKeyboardButton('Новый заказ', callback_data='new_order')
     itembtn2 = types.InlineKeyboardButton('Мои заказы', callback_data='my_orders')
@@ -413,6 +475,53 @@ def category_selected(call):
     return category_id
 
 
+def delete_order_position(order_position_id, db_name='database.db'):
+    try:
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        # Удаляем запись из таблицы Order_position по id
+        cursor.execute('DELETE FROM Order_position WHERE id = ?', (order_position_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            print("Запись не найдена.")
+        else:
+            print("Запись успешно удалена.")
+    except sqlite3.Error as e:
+        print(f"Ошибка при удалении записи: {e}")
+    finally:
+        conn.close()
+
+
+def update_order_position(order_position_id, quantity, db_name='database.db'):
+    try:
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        # Обновляем количество в позиции заказа
+        cursor.execute('UPDATE Order_position SET quantity = ? WHERE id = ?', (quantity, order_position_id))
+        conn.commit()
+        if cursor.rowcount == 0:
+            print("Запись не найдена.")
+        else:
+            print("Количество успешно обновлено.")
+    except sqlite3.Error as e:
+        print(f"Ошибка при обновлении записи: {e}")
+    finally:
+        conn.close()
+
+
+def manage_order_position(order_position_id):
+    action = input("Введите 'удалить' для удаления позиции или 'изменить' для изменения количества: ").strip().lower()
+    if action == 'удалить':
+        delete_order_position(order_position_id)
+    elif action == 'изменить':
+        quantity = int(input("Введите новое количество: "))
+        update_order_position(order_position_id, quantity)
+    else:
+        print("Некорректный ввод. Пожалуйста, введите 'удалить' или 'изменить'.")
+
+
 create_db_and_table()
 create_table_users()
 create_table_category()
@@ -423,21 +532,8 @@ create_table_order_position()
 create_table_feedback()
 add_user_role()
 
-Category = 1
-name = "еда1"
-price = 100
-image = "ссылка на рисунок"
-
 #add_dishes(Category, name, price, image)
-
-user_name = "@Kvitov_Evgeny"
-phone = '89997776655'
-address = 'tyumen'
-
 #user_change(user_name, phone, address)
-order_id = add_order(user_name)
-
-add_order_position(order_id,1,2)
-
 # Запуск бота
 bot.polling(none_stop=True)
+
