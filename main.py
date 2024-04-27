@@ -1,5 +1,10 @@
 import sqlite3
+import telebot
+from telebot import types
 
+# Токен бота
+TOKEN = '6788073016:AAHjfoI1LAL49Ju0HJXEh8Lx8rGhlVVVVv4'
+bot = telebot.TeleBot(TOKEN)
 
 def create_db_and_table():
     try:
@@ -61,14 +66,16 @@ def update_user_role(name, new_role):
 #
 #     cur.execute('''
 #     CREATE TABLE IF NOT EXISTS orders
-#     (id INTEGER PRIMARY KEY  AUTOINCREMENT,
-#     sum FLOAT CHECK (Sum >= 0),
+#     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+#     sum FLOAT CHECK (sum >= 0),
+#     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 #     FOREIGN KEY(user_id) REFERENCES Users(id),
 #     FOREIGN KEY(status_id) REFERENCES Order_status(id))
 #     ''')
 #
 #     conn.commit()
 #     conn.close()
+
 
 def create_table_dishes():
     conn = sqlite3.connect('zero_order_service.db')
@@ -185,6 +192,7 @@ def create_table_orders():
     user_id INTEGER NOT NULL,
     sum FLOAT CHECK (Sum >= 0),
     status_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES Users(id),
     FOREIGN KEY(status_id) REFERENCES order_status(id))
     ''')
@@ -307,6 +315,103 @@ def add_order_position(order_id, dishes_id, count):
     conn.commit()
     conn.close()
 
+# создание таблицы отзывов о блюде
+def create_table_feedback():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS feedback 
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        dishes INTEGER NOT NULL, 
+        user INTEGER NOT NULL, 
+        content TEXT NOT NULL, 
+        rating INTEGER, 
+        FOREIGN KEY(user) REFERENCES Users(id) 
+        FOREIGN KEY(dishes) REFERENCES dishes(id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def add_feedback(dishes, user, content):
+    rating = get_rating()
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute("INSERT INTO feedback (dishes, user, content, rating) VALUES (?, ?, ?, ?)", (dishes, user, content, rating))
+    conn.commit()
+    conn.close()
+
+def get_rating():
+    while True:
+        rating = input("Введите рейтинг от 1 до 5: ")
+        if rating.isdigit() and 1 <= int(rating) <= 5:
+            return int(rating)
+        else:
+            print("Неверный ввод. Пожалуйста, введите число от 1 до 5.")
+
+
+# Подключение к базе данных
+def connect_to_db():
+    conn = sqlite3.connect('zero_order_service.db')
+    return conn
+
+# Получение категорий из базы данных
+def get_categories():
+    conn = connect_to_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, category_name FROM Category_dishes")
+    categories = cursor.fetchall()
+    conn.close()
+    return categories
+
+# Обработка команды start
+# Обработка команды start
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    markup = types.InlineKeyboardMarkup()
+    itembtn1 = types.InlineKeyboardButton('Новый заказ', callback_data='new_order')
+    itembtn2 = types.InlineKeyboardButton('Мои заказы', callback_data='my_orders')
+    markup.add(itembtn1, itembtn2)
+    bot.send_message(message.chat.id, "Привет! Чем могу помочь?", reply_markup=markup)
+
+# Обработка текстовых сообщений
+@bot.message_handler(content_types=['text'])
+def handle_message(message):
+    if message.text == 'Новый заказ':
+        categories = get_categories()
+        markup = types.InlineKeyboardMarkup()
+        for category_id, category_name in categories:
+            callback_data = f'category_{category_id}'
+            markup.add(types.InlineKeyboardButton(category_name, callback_data=callback_data))
+        bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=markup)
+    elif message.text == 'Мои заказы':
+        bot.send_message(message.chat.id, "Ваши заказы:")
+
+# Обработка callback от inline кнопок
+@bot.callback_query_handler(func=lambda call: call.data == 'new_order' or call.data == 'my_orders')
+def handle_query(call):
+    if call.data == 'new_order':
+        # Обработка выбора "Новый заказ"
+        categories = get_categories()
+        markup = types.InlineKeyboardMarkup()
+        for category_id, category_name in categories:
+            callback_data = f'category_{category_id}'
+            markup.add(types.InlineKeyboardButton(category_name, callback_data=callback_data))
+        bot.send_message(call.message.chat.id, "Выберите категорию:", reply_markup=markup)
+    elif call.data == 'my_orders':
+        # Обработка выбора "Мои заказы"
+        bot.send_message(call.message.chat.id, "Ваши заказы:")
+    bot.answer_callback_query(call.id)
+
+
+# Обработка выбора категории
+@bot.callback_query_handler(func=lambda call: call.data.startswith('category_'))
+def category_selected(call):
+    # Извлекаем ID категории из callback_data
+    category_id = call.data.split('_')[1]
+    bot.send_message(call.message.chat.id, f"выбран id {category_id}")
+    return category_id
+
 
 create_db_and_table()
 create_table_users()
@@ -315,6 +420,7 @@ create_table_status()
 create_table_dishes()
 create_table_orders()
 create_table_order_position()
+create_table_feedback()
 add_user_role()
 
 Category = 1
@@ -332,3 +438,6 @@ address = 'tyumen'
 order_id = add_order(user_name)
 
 add_order_position(order_id,1,2)
+
+# Запуск бота
+bot.polling(none_stop=True)
