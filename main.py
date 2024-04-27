@@ -10,7 +10,7 @@ Configuration.account_id = shop_id
 Configuration.secret_key = secret_key
 
 # Токен бота
-TOKEN = '6788073016:AAHjfoI1LAL49Ju0HJXEh8Lx8rGhlVVVVv4'
+TOKEN = '6788073016:AAH4FmcQlkVbkmFaCwt-Z9z0RwHd_q5ORBg'
 bot = telebot.TeleBot(TOKEN)
 
 def create_db_and_table():
@@ -474,12 +474,29 @@ def handle_query(call):
 
 
 # Обработка выбора категории
+# Обработка выбора категории
 @bot.callback_query_handler(func=lambda call: call.data.startswith('category_'))
 def category_selected(call):
     # Извлекаем ID категории из callback_data
     category_id = call.data.split('_')[1]
-    bot.send_message(call.message.chat.id, f"выбран id {category_id}")
-    return category_id
+    #bot.send_message(call.message.chat.id, f"выбран id {category_id}")
+    products = get_products_by_category(category_id)
+    markup = types.InlineKeyboardMarkup()
+    # Добавляем кнопки для каждого продукта
+    for product_id, product_name in products:
+        callback_data = f'product_{product_id}'
+        markup.add(types.InlineKeyboardButton(product_name, callback_data=callback_data))
+    bot.send_message(call.message.chat.id, "Выберите продукт:", reply_markup=markup)
+    bot.answer_callback_query(call.id)
+
+
+def get_products_by_category(category_id):
+    conn = connect_to_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM dishes WHERE category_id=?",(category_id,))
+    products = cursor.fetchall()
+    conn.close()
+    return products
 
 
 def delete_order_position(order_position_id, db_name='database.db'):
