@@ -389,8 +389,12 @@ def add_order_position(order_id, dishes_id, count):
     temp_sum = price1*count
     cur.execute("insert into order_positions (order_id, dishes_id, count, temp_sum) values(?,?,?,?)",
                 (order_id, dishes_id, count, temp_sum))
+    id = cur.fetchone()
+    if id:
+        id = id[0]
     conn.commit()
     conn.close()
+    return id
 
 # создание таблицы отзывов о блюде
 def create_table_feedback():
@@ -721,7 +725,7 @@ def process_quantity(message, user_record, temp_storage, user_id):
         order_id = add_order(user_id)  # Функция для получения или создания нового заказа
 
         # Добавляем продукт в заказ с указанным количеством
-        add_order_position(user_record, product_id, quantity)
+        add_order_position(order_id, product_id, quantity)
 
         # Убираем информацию о продукте из временного хранилища
         del temp_storage[user_record]
