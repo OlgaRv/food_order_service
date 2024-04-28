@@ -460,6 +460,21 @@ def send_welcome(message):
     markup.add(itembtn1, itembtn2)
     bot.send_message(message.chat.id, "Привет! Чем могу помочь?", reply_markup=markup)
 
+
+@bot.callback_query_handler(func=lambda call: call.data == 'start_back')
+def handle_query(call):
+    user_id = call.from_user.id  # Определяем user_id из данных запроса
+    markup = types.InlineKeyboardMarkup()
+    itembtn1 = types.InlineKeyboardButton('Новый заказ', callback_data='new_order')
+    itembtn2 = types.InlineKeyboardButton('Мои заказы', callback_data='my_orders')
+    markup.add(itembtn1, itembtn2)
+
+    # Используем call.message.chat.id чтобы отправить сообщение в правильный чат
+    bot.send_message(call.message.chat.id, "Привет! Чем могу помочь?", reply_markup=markup)
+
+    # Не забудьте подтвердить обработку callback-запроса
+    bot.answer_callback_query(call.id)
+
 # Обработка текстовых сообщений
 @bot.message_handler(content_types=['text'])
 def handle_message(message):
@@ -514,7 +529,7 @@ def handle_query(call):
             for order_id, _, _, _, order_name in list_of_orders:
                 callback_data = f'myorder_{order_id}'
                 markup.add(types.InlineKeyboardButton(order_name, callback_data=callback_data))
-            back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'start_back')
+            back_button = types.InlineKeyboardButton("Назад к выбору", callback_data=f'start_back')
             markup.add(back_button)
             bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
         else:
@@ -594,7 +609,16 @@ def process_quantity_change(message, pos_id, call):
 def update_order_position(pos_id, quantity, db_name):
     conn = sqlite3.connect(db_name)
     cur = conn.cursor()
-    cur.execute("UPDATE order_positions SET count = ? WHERE id = ?", (quantity, pos_id))
+    cur.execute("select dishes_id from order_positions where id = ?", (pos_id,))
+    dishes_id = cur.fetchone()
+    if dishes_id:
+        dishes_id = dishes_id[0]
+    cur.execute("select price from dishes where id = ?", (dishes_id,))
+    price = cur.fetchone()
+    if price:
+        price = price[0]
+    temp_sum = price*quantity
+    cur.execute("UPDATE order_positions SET count = ?, temp_sum = ? WHERE id = ?", (quantity, temp_sum, pos_id))
     conn.commit()
     conn.close()
 
@@ -666,6 +690,8 @@ def go_back_to_order_positions(call):
         for order_id, _, _, _, order_name in list_of_orders:
             callback_data = f'myorder_{order_id}'
             markup.add(types.InlineKeyboardButton(order_name, callback_data=callback_data))
+        back_button = types.InlineKeyboardButton("Назад к выбору", callback_data=f'start_back')
+        markup.add(back_button)
         bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
