@@ -619,6 +619,19 @@ def update_order_position(pos_id, quantity, db_name):
         price = price[0]
     temp_sum = price*quantity
     cur.execute("UPDATE order_positions SET count = ?, temp_sum = ? WHERE id = ?", (quantity, temp_sum, pos_id))
+
+    cur.execute('Select order_id from order_positions where id=?', (pos_id,))
+    check3 = cur.fetchone()
+    if check3:
+        check3 = check3[0]
+        cur.execute("SELECT SUM(temp_sum) FROM order_positions WHERE order_id = ?", (check3,))
+        summa = cur.fetchone()
+        if summa:
+            summa = summa[0]
+        cur.execute('UPDATE orders SET sum = ? WHERE id = ?', (summa, check3))
+        conn.commit()
+
+
     conn.commit()
     conn.close()
 
@@ -818,7 +831,11 @@ def complete_order(user_id):
     check3 = cur.fetchone()
     if check3:
         check3 = check3[0]
-        cur.execute('UPDATE orders SET status_id = ? WHERE id = ?', (check4, check3))
+        cur.execute("SELECT SUM(temp_sum) FROM order_positions WHERE order_id = ?", (check3,))
+        summa = cur.fetchone()
+        if summa:
+            summa = summa[0]
+        cur.execute('UPDATE orders SET status_id = ?, sum = ? WHERE id = ?', (check4, summa, check3))
         conn.commit()
         print('оменяли статус заказа на "В работу"')
     else:
