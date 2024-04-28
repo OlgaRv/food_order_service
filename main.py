@@ -334,7 +334,7 @@ def user_change(user_name, phone, address):
     conn.commit()
     conn.close()
 
-def add_order(user_name):
+def add_order(user_id):
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
 
@@ -346,20 +346,31 @@ def add_order(user_name):
         print("Нет такого статуса")
 
 
-    cur.execute('Select id From Users where name=?',(user_name,))
+    cur.execute('Select id, user_id From Users where user_id=?',(user_id,))
     check1 = cur.fetchone()
     if check1:
         check1 = check1[0]
     else:
         print("Нет такого юзера")
 
-    if check1 and check2:
+    cur.execute('Select id From orders where user_id=? and status_id=?', (check1,check2))
+    check3 = cur.fetchone()
+    if check3:
+        check3 = check3[0]
+    else:
+        print("Нет такого юзера")
+
+    if check1 and check2 and not check3:
         cur.execute("INSERT INTO orders (user_id, status_id) VALUES (?, ?)",
                     (check1, check2))
         order_id = cur.lastrowid  # Получение ID нового заказа
         conn.commit()
         print(f"Заказ добавлен. ID нового заказа: {order_id}")
         return order_id
+    elif check1 and check2 and check3:
+
+        print(f"уже имеется заказ со статусом 'Новый': {check3}")
+        return check3
 
     else:
         print("Не удалось добавить заказ: отсутствует ID пользователя или статуса.")
@@ -489,6 +500,19 @@ def category_selected(call):
     bot.send_message(call.message.chat.id, "Выберите продукт:", reply_markup=markup)
     bot.answer_callback_query(call.id)
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith('product_'))
+def product_selected(call):
+    user_id = call.from_user.id  # Идентификатор пользователя в Telegram
+    product_id = call.data.split('_')[1]  # Извлечение ID продукта
+
+    # Проверяем, есть ли уже начатый заказ для этого пользователя
+    order_id = add_order(user_id)  # Функция для получения или создания нового заказа
+
+    # Добавляем продукт в заказ
+    add_order_position(order_id, product_id, 1)  # Предполагаем, что добавляется 1 единица продукта
+
+    bot.answer_callback_query(call.id)
+    bot.send_message(call.message.chat.id, "Продукт добавлен в ваш заказ. Добавьте еще или завершите заказ.")
 
 def get_products_by_category(category_id):
     conn = connect_to_db()
