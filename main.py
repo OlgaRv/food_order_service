@@ -512,7 +512,66 @@ def product_selected(call):
     add_order_position(order_id, product_id, 1)  # Предполагаем, что добавляется 1 единица продукта
 
     bot.answer_callback_query(call.id)
-    bot.send_message(call.message.chat.id, "Продукт добавлен в ваш заказ. Добавьте еще или завершите заказ.")
+
+    markup = types.InlineKeyboardMarkup()
+    finish_button = types.InlineKeyboardButton("Завершить заказ", callback_data='finish_order')
+    add_more_button = types.InlineKeyboardButton("Добавить товар", callback_data='add_more')
+    markup.add(add_more_button, finish_button)
+
+    bot.send_message(call.message.chat.id, "Продукт добавлен в ваш заказ. Добавьте еще или завершите заказ."
+                     ,reply_markup = markup)
+@bot.callback_query_handler(func=lambda call: call.data == 'add_more')
+def add_more_products(call):
+    user_id = call.from_user.id
+    # Здесь можно вызвать функцию, которая предложит пользователю повторно выбрать категорию продукта
+    add_order_position(user_id)
+    bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'finish_order')
+def finish_order(call):
+    user_id = call.from_user.id
+    complete_order(user_id)  # Функция, которая изменяет статус заказа на "Завершен"
+    bot.answer_callback_query(call.id)
+    bot.send_message(call.message.chat.id, "Ваш заказ завершен и скоро будет обработан.")
+
+def complete_order(user_id):
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    cur.execute('Select id From order_status where name=?', ("Новый",))
+    check2 = cur.fetchone()
+    if check2:
+        check2 = check2[0] #пределили id статуса "Новый"
+    else:
+        print("Нет такого статуса")
+
+    cur.execute('Select id From order_status where name=?', ("В работу",))
+    check4 = cur.fetchone()
+    if check4:
+        check4 = check4[0] #определили id статуса "В работу"
+    else:
+        print("Нет статуса В работу")
+
+    cur.execute('Select id, user_id From Users where user_id=?', (user_id,))
+    check1 = cur.fetchone()
+    if check1:
+        check1 = check1[0] #определили id юзера с данным user_id
+    else:
+        print("Нет такого юзера")
+
+    #Находим заказ по данному юзеру со статусом новый, и меняем статус заказа
+    cur.execute('Select id From orders where user_id=? and status_id=?', (check1, check2))
+    check3 = cur.fetchone()
+    if check3:
+        check3 = check3[0]
+        cur.execute('UPDATE orders SET status_id = ? WHERE id = ?', (check4, check3))
+        conn.commit()
+        print('оменяли статус заказа на "В работу"')
+    else:
+        print("Нет такого юзера")
+
+    conn.close()
+
 
 def get_products_by_category(category_id):
     conn = connect_to_db()
