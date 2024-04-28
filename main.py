@@ -549,16 +549,34 @@ def order_position_select(call):
 def prompt_change_quantity(call):
     pos_id = call.data.split("_")[1]
     msg = bot.send_message(call.message.chat.id, "Введите новое количество:")
-    bot.register_next_step_handler(msg, process_quantity_change, pos_id)
+    bot.register_next_step_handler(msg, process_quantity_change, pos_id, call)
 
-def process_quantity_change(message, pos_id):
+def process_quantity_change(message, pos_id, call):
     try:
         quantity = int(message.text)
         update_order_position(pos_id, quantity, db_name='zero_order_service.db')
         bot.send_message(message.chat.id, "Количество успешно обновлено!")
+        conn = sqlite3.connect('zero_order_service.db')
+        cur = conn.cursor()
+        cur.execute('Select order_id From order_positions where id=?', (pos_id,))
+        order_id = cur.fetchone()[0]
+        cur.execute('Select * From order_positions where order_id=?', (order_id,))
+        positions = cur.fetchall()
+        markup = types.InlineKeyboardMarkup()
+        for id, order_id, dishes_id, count, temp_sum in positions:
+            button_text = f"{temp_sum} - {count} шт."
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
+            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
+            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
+            markup.row(pos_button, change_button, delete_button)
+        back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
+        markup.add(back_button)
+        bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
+        conn.close()
+        bot.answer_callback_query(call.id)
     except ValueError:
         bot.send_message(message.chat.id, "Пожалуйста, введите корректное число.")
-        return
+
 
 def update_order_position(pos_id, quantity, db_name):
     conn = sqlite3.connect(db_name)
