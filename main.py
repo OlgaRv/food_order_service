@@ -522,21 +522,126 @@ def order_position_select(call):
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
     cur.execute('Select * From order_positions where order_id=?', (order_id,))
-    check = cur.fetchall()
-    if check:
+    positions = cur.fetchall()
+    if positions:
         markup = types.InlineKeyboardMarkup()
-        for id, order_id, dishes_id, count, temp_sum in check:
-
-            #for order_id, _, _, _, order_name in list_of_orders:
-            callback_data = f'myorderposition_{id}'
-            button_text = temp_sum#join(":",id,order_id,count,dishes_id,temp_sum)
-            markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
+        for id, order_id, dishes_id, count, temp_sum in positions:
+            button_text = f"{temp_sum} - {count} шт."
+            # Создаем кнопку для позиции
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
+            # Создаем кнопку для изменения количества
+            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
+            # Создаем кнопку для удаления позиции
+            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
+            # Добавляем кнопки в одной строке
+            markup.row(pos_button, change_button, delete_button)
+        # Добавляем кнопку "Назад к заказам"
+        back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
+        markup.add(back_button)
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
 
+    bot.answer_callback_query(call.id)
+    conn.close()
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('change_'))
+def prompt_change_quantity(call):
+    pos_id = call.data.split("_")[1]
+    msg = bot.send_message(call.message.chat.id, "Введите новое количество:")
+    bot.register_next_step_handler(msg, process_quantity_change, pos_id)
+
+def process_quantity_change(message, pos_id):
+    try:
+        quantity = int(message.text)
+        update_order_position(pos_id, quantity, db_name='zero_order_service.db')
+        bot.send_message(message.chat.id, "Количество успешно обновлено!")
+    except ValueError:
+        bot.send_message(message.chat.id, "Пожалуйста, введите корректное число.")
+        return
+
+def update_order_position(pos_id, quantity, db_name):
+    conn = sqlite3.connect(db_name)
+    cur = conn.cursor()
+    cur.execute("UPDATE order_positions SET count = ? WHERE id = ?", (quantity, pos_id))
+    conn.commit()
+    conn.close()
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('delete_'))
+def delete_order_position(call):
+    pos_id = call.data.split("_")[1]
+    # Здесь ваш код для удаления позиции
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute('Select order_id From order_positions where id=?', (pos_id,))
+    order_id = cur.fetchone()
+    if order_id:
+        order_id = order_id[0]
+
+    delete_order_position(pos_id, db_name='zero_order_service.db')
+    cur.execute('Select * From order_positions where order_id=?', (order_id,))
+    positions = cur.fetchall()
+    if positions:
+        markup = types.InlineKeyboardMarkup()
+        for id, order_id, dishes_id, count, temp_sum in positions:
+            button_text = f"{temp_sum} - {count} шт."
+            # Создаем кнопку для позиции
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
+            # Создаем кнопку для изменения количества
+            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
+            # Создаем кнопку для удаления позиции
+            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
+            # Добавляем кнопки в одной строке
+            markup.row(pos_button, change_button, delete_button)
+        # Добавляем кнопку "Назад к заказам"
+        back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
+        markup.add(back_button)
+        bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
+    else:
+        bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
+    conn.close()
+    bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('myorders_back_'))
+def go_back_to_order_positions(call):
+    order_id = call.data.split("_")[2]
+    # Здесь ваш код для возврата к списку позиций заказа
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    user_id = call.from_user.id  # Определяем user_id из данных запроса
+    # Проверяем существование профиля пользователя в системе
+    cur.execute('SELECT id FROM Users WHERE user_id=?', (user_id,))
+    user_record = cur.fetchone()
+    if not user_record:
+        bot.send_message(call.message.chat.id, "У вас нет профиля в системе.")
+        return
+
+    # Получаем заказы пользователя
+    cur.execute('Select id, user_id From Users where user_id=?', (user_id,))
+    check1 = cur.fetchone()
+    if check1:
+        check1 = check1[0]  # определили id юзера с данным user_id
+    else:
+        print("Нет такого юзера")
+
+    cur.execute('SELECT * FROM Orders WHERE user_id=?', (check1,))
+    list_of_orders = cur.fetchall()
+
+    if list_of_orders:
+        markup = types.InlineKeyboardMarkup()
+        for order_id, _, _, _, order_name in list_of_orders:
+            callback_data = f'myorder_{order_id}'
+            markup.add(types.InlineKeyboardButton(order_name, callback_data=callback_data))
+        bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
+    else:
+        bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
+
     bot.answer_callback_query(call.id)  # Ответ на callback_query
+
     conn.close()  # Не забудьте закрыть соединение с базой данных
+
+    #bot.answer_callback_query(call.id)
 
 # Обработка выбора категории
 # Обработка выбора категории
@@ -646,7 +751,7 @@ def delete_order_position(order_position_id, db_name='database.db'):
         cursor = conn.cursor()
 
         # Удаляем запись из таблицы Order_position по id
-        cursor.execute('DELETE FROM Order_position WHERE id = ?', (order_position_id,))
+        cursor.execute('DELETE FROM order_positions WHERE id = ?', (order_position_id,))
         conn.commit()
         if cursor.rowcount == 0:
             print("Запись не найдена.")
@@ -658,23 +763,23 @@ def delete_order_position(order_position_id, db_name='database.db'):
         conn.close()
 
 
-def update_order_position(order_position_id, quantity, db_name='database.db'):
-    try:
-        conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()
-
-        # Обновляем количество в позиции заказа
-        cursor.execute('UPDATE Order_position SET quantity = ? WHERE id = ?', (quantity, order_position_id))
-        conn.commit()
-        if cursor.rowcount == 0:
-            print("Запись не найдена.")
-        else:
-            print("Количество успешно обновлено.")
-    except sqlite3.Error as e:
-        print(f"Ошибка при обновлении записи: {e}")
-    finally:
-        conn.close()
-
+#def update_order_position(order_position_id, quantity, db_name='database.db'):
+    # try:
+    #     conn = sqlite3.connect(db_name)
+    #     cursor = conn.cursor()
+    #
+    #     # Обновляем количество в позиции заказа
+    #     cursor.execute('UPDATE order_positions SET quantity = ? WHERE id = ?', (quantity, order_position_id))
+    #     conn.commit()
+    #     if cursor.rowcount == 0:
+    #         print("Запись не найдена.")
+    #     else:
+    #         print("Количество успешно обновлено.")
+    # except sqlite3.Error as e:
+    #     print(f"Ошибка при обновлении записи: {e}")
+    # finally:
+    #     conn.close()
+    #
 
 def manage_order_position(order_position_id):
     action = input("Введите 'удалить' для удаления позиции или 'изменить' для изменения количества: ").strip().lower()
