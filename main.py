@@ -546,10 +546,27 @@ def order_position_select(call):
     conn.close()
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('change_'))
-def change_order_position_quantity(call):
+def prompt_change_quantity(call):
     pos_id = call.data.split("_")[1]
-    # Здесь ваш код для изменения количества
-    bot.answer_callback_query(call.id)
+    msg = bot.send_message(call.message.chat.id, "Введите новое количество:")
+    bot.register_next_step_handler(msg, process_quantity_change, pos_id)
+
+def process_quantity_change(message, pos_id):
+    try:
+        quantity = int(message.text)
+        update_order_position(pos_id, quantity, db_name='zero_order_service.db')
+        bot.send_message(message.chat.id, "Количество успешно обновлено!")
+    except ValueError:
+        bot.send_message(message.chat.id, "Пожалуйста, введите корректное число.")
+        return
+
+def update_order_position(pos_id, quantity, db_name):
+    conn = sqlite3.connect(db_name)
+    cur = conn.cursor()
+    cur.execute("UPDATE order_positions SET count = ? WHERE id = ?", (quantity, pos_id))
+    conn.commit()
+    conn.close()
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('delete_'))
 def delete_order_position(call):
@@ -746,23 +763,23 @@ def delete_order_position(order_position_id, db_name='database.db'):
         conn.close()
 
 
-def update_order_position(order_position_id, quantity, db_name='database.db'):
-    try:
-        conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()
-
-        # Обновляем количество в позиции заказа
-        cursor.execute('UPDATE Order_position SET quantity = ? WHERE id = ?', (quantity, order_position_id))
-        conn.commit()
-        if cursor.rowcount == 0:
-            print("Запись не найдена.")
-        else:
-            print("Количество успешно обновлено.")
-    except sqlite3.Error as e:
-        print(f"Ошибка при обновлении записи: {e}")
-    finally:
-        conn.close()
-
+#def update_order_position(order_position_id, quantity, db_name='database.db'):
+    # try:
+    #     conn = sqlite3.connect(db_name)
+    #     cursor = conn.cursor()
+    #
+    #     # Обновляем количество в позиции заказа
+    #     cursor.execute('UPDATE order_positions SET quantity = ? WHERE id = ?', (quantity, order_position_id))
+    #     conn.commit()
+    #     if cursor.rowcount == 0:
+    #         print("Запись не найдена.")
+    #     else:
+    #         print("Количество успешно обновлено.")
+    # except sqlite3.Error as e:
+    #     print(f"Ошибка при обновлении записи: {e}")
+    # finally:
+    #     conn.close()
+    #
 
 def manage_order_position(order_position_id):
     action = input("Введите 'удалить' для удаления позиции или 'изменить' для изменения количества: ").strip().lower()
