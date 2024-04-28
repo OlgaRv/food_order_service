@@ -516,6 +516,28 @@ def handle_query(call):
 
         conn.close()  # Не забудьте закрыть соединение с базой данных
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith('myorder_'))
+def order_position_select(call):
+    order_id = call.data.split("_")[1]
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute('Select * From order_positions where order_id=?', (order_id,))
+    check = cur.fetchall()
+    if check:
+        markup = types.InlineKeyboardMarkup()
+        for id, order_id, dishes_id, count, temp_sum in check:
+
+            #for order_id, _, _, _, order_name in list_of_orders:
+            callback_data = f'myorderposition_{id}'
+            button_text = temp_sum#join(":",id,order_id,count,dishes_id,temp_sum)
+            markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
+        bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
+    else:
+        bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
+
+    bot.answer_callback_query(call.id)  # Ответ на callback_query
+    conn.close()  # Не забудьте закрыть соединение с базой данных
+
 # Обработка выбора категории
 # Обработка выбора категории
 @bot.callback_query_handler(func=lambda call: call.data.startswith('category_'))
