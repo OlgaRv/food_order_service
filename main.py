@@ -537,7 +537,10 @@ def order_position_select(call):
             markup.row(pos_button, change_button, delete_button)
         # Добавляем кнопку "Назад к заказам"
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
+        pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'myorders_back_{order_id}')
         markup.add(back_button)
+        markup.add(pay_button)
+
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
@@ -571,6 +574,8 @@ def process_quantity_change(message, pos_id, call):
             markup.row(pos_button, change_button, delete_button)
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
         markup.add(back_button)
+        pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'myorders_back_{order_id}')
+        markup.add(pay_button)
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
         conn.close()
         bot.answer_callback_query(call.id)
@@ -615,6 +620,8 @@ def delete_order_position(call):
         # Добавляем кнопку "Назад к заказам"
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
         markup.add(back_button)
+        pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'myorders_back_{order_id}')
+        markup.add(pay_button)
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
