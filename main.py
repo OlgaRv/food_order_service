@@ -470,6 +470,7 @@ def handle_message(message):
 # Обработка callback от inline кнопок
 @bot.callback_query_handler(func=lambda call: call.data == 'new_order' or call.data == 'my_orders')
 def handle_query(call):
+    user_id = call.from_user.id  # Определяем user_id из данных запроса
     if call.data == 'new_order':
         # Обработка выбора "Новый заказ"
         categories = get_categories()
@@ -480,9 +481,40 @@ def handle_query(call):
         bot.send_message(call.message.chat.id, "Выберите категорию:", reply_markup=markup)
     elif call.data == 'my_orders':
         # Обработка выбора "Мои заказы"
-        bot.send_message(call.message.chat.id, "Ваши заказы:")
-    bot.answer_callback_query(call.id)
+        conn = sqlite3.connect('zero_order_service.db')
+        cur = conn.cursor()
 
+        # Проверяем существование профиля пользователя в системе
+        cur.execute('SELECT id FROM Users WHERE user_id=?', (user_id,))
+        user_record = cur.fetchone()
+        if not user_record:
+            bot.send_message(call.message.chat.id, "У вас нет профиля в системе.")
+            return
+
+        # Получаем заказы пользователя
+        cur.execute('Select id, user_id From Users where user_id=?', (user_id,))
+        check1 = cur.fetchone()
+        if check1:
+            check1 = check1[0]  # определили id юзера с данным user_id
+        else:
+            print("Нет такого юзера")
+
+
+        cur.execute('SELECT * FROM Orders WHERE user_id=?', (check1,))
+        list_of_orders = cur.fetchall()
+
+        if list_of_orders:
+            markup = types.InlineKeyboardMarkup()
+            for order_id, _, _, _, order_name in list_of_orders:
+                callback_data = f'myorder_{order_id}'
+                markup.add(types.InlineKeyboardButton(order_name, callback_data=callback_data))
+            bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
+        else:
+            bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
+
+        bot.answer_callback_query(call.id)  # Ответ на callback_query
+
+        conn.close()  # Не забудьте закрыть соединение с базой данных
 
 # Обработка выбора категории
 # Обработка выбора категории
@@ -515,7 +547,7 @@ def product_selected(call):
 
     markup = types.InlineKeyboardMarkup()
     finish_button = types.InlineKeyboardButton("Завершить заказ", callback_data='finish_order')
-    add_more_button = types.InlineKeyboardButton("Добавить товар", callback_data='add_more')
+    add_more_button = types.InlineKeyboardButton("Добавить товар", callback_data='new_order')
     markup.add(add_more_button, finish_button)
 
     bot.send_message(call.message.chat.id, "Продукт добавлен в ваш заказ. Добавьте еще или завершите заказ."
@@ -532,7 +564,11 @@ def finish_order(call):
     user_id = call.from_user.id
     complete_order(user_id)  # Функция, которая изменяет статус заказа на "Завершен"
     bot.answer_callback_query(call.id)
-    bot.send_message(call.message.chat.id, "Ваш заказ завершен и скоро будет обработан.")
+    markup = types.InlineKeyboardMarkup()
+    itembtn1 = types.InlineKeyboardButton('Новый заказ', callback_data='new_order')
+    itembtn2 = types.InlineKeyboardButton('Мои заказы', callback_data='my_orders')
+    markup.add(itembtn1, itembtn2)
+    bot.send_message(call.message.chat.id, "Ваш заказ завершен и скоро будет обработан.", reply_markup=markup)
 
 def complete_order(user_id):
     conn = sqlite3.connect('zero_order_service.db')
