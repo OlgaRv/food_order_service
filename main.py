@@ -526,9 +526,10 @@ def handle_query(call):
 
         if list_of_orders:
             markup = types.InlineKeyboardMarkup()
-            for order_id, _, _, _, order_name in list_of_orders:
+            for order_id, _, sum, _, order_name in list_of_orders:
                 callback_data = f'myorder_{order_id}'
-                markup.add(types.InlineKeyboardButton(order_name, callback_data=callback_data))
+                button_text = f"от {order_name} на {sum} руб."
+                markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
             back_button = types.InlineKeyboardButton("Назад к выбору", callback_data=f'start_back')
             markup.add(back_button)
             bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
@@ -700,9 +701,10 @@ def go_back_to_order_positions(call):
 
     if list_of_orders:
         markup = types.InlineKeyboardMarkup()
-        for order_id, _, _, _, order_name in list_of_orders:
+        for order_id, _, sum, _, order_name in list_of_orders:
             callback_data = f'myorder_{order_id}'
-            markup.add(types.InlineKeyboardButton(order_name, callback_data=callback_data))
+            button_text = f"от {order_name} на {sum} руб."
+            markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
         back_button = types.InlineKeyboardButton("Назад к выбору", callback_data=f'start_back')
         markup.add(back_button)
         bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
