@@ -545,7 +545,57 @@ def order_position_select(call):
     bot.answer_callback_query(call.id)
     conn.close()
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith('change_'))
+def change_order_position_quantity(call):
+    pos_id = call.data.split("_")[1]
+    # Здесь ваш код для изменения количества
+    bot.answer_callback_query(call.id)
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith('delete_'))
+def delete_order_position(call):
+    pos_id = call.data.split("_")[1]
+    # Здесь ваш код для удаления позиции
+    bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('myorders_back_'))
+def go_back_to_order_positions(call):
+    order_id = call.data.split("_")[2]
+    # Здесь ваш код для возврата к списку позиций заказа
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    user_id = call.from_user.id  # Определяем user_id из данных запроса
+    # Проверяем существование профиля пользователя в системе
+    cur.execute('SELECT id FROM Users WHERE user_id=?', (user_id,))
+    user_record = cur.fetchone()
+    if not user_record:
+        bot.send_message(call.message.chat.id, "У вас нет профиля в системе.")
+        return
+
+    # Получаем заказы пользователя
+    cur.execute('Select id, user_id From Users where user_id=?', (user_id,))
+    check1 = cur.fetchone()
+    if check1:
+        check1 = check1[0]  # определили id юзера с данным user_id
+    else:
+        print("Нет такого юзера")
+
+    cur.execute('SELECT * FROM Orders WHERE user_id=?', (check1,))
+    list_of_orders = cur.fetchall()
+
+    if list_of_orders:
+        markup = types.InlineKeyboardMarkup()
+        for order_id, _, _, _, order_name in list_of_orders:
+            callback_data = f'myorder_{order_id}'
+            markup.add(types.InlineKeyboardButton(order_name, callback_data=callback_data))
+        bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
+    else:
+        bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
+
+    bot.answer_callback_query(call.id)  # Ответ на callback_query
+
+    conn.close()  # Не забудьте закрыть соединение с базой данных
+
+    #bot.answer_callback_query(call.id)
 
 # Обработка выбора категории
 # Обработка выбора категории
