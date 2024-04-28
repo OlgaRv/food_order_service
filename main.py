@@ -522,21 +522,30 @@ def order_position_select(call):
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
     cur.execute('Select * From order_positions where order_id=?', (order_id,))
-    check = cur.fetchall()
-    if check:
+    positions = cur.fetchall()
+    if positions:
         markup = types.InlineKeyboardMarkup()
-        for id, order_id, dishes_id, count, temp_sum in check:
-
-            #for order_id, _, _, _, order_name in list_of_orders:
-            callback_data = f'myorderposition_{id}'
-            button_text = temp_sum#join(":",id,order_id,count,dishes_id,temp_sum)
-            markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
+        for id, order_id, dishes_id, count, temp_sum in positions:
+            button_text = f"{temp_sum} - {count} шт."
+            # Создаем кнопку для позиции
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
+            # Создаем кнопку для изменения количества
+            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
+            # Создаем кнопку для удаления позиции
+            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
+            # Добавляем кнопки в одной строке
+            markup.row(pos_button, change_button, delete_button)
+        # Добавляем кнопку "Назад к заказам"
+        back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
+        markup.add(back_button)
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
 
-    bot.answer_callback_query(call.id)  # Ответ на callback_query
-    conn.close()  # Не забудьте закрыть соединение с базой данных
+    bot.answer_callback_query(call.id)
+    conn.close()
+
+
 
 # Обработка выбора категории
 # Обработка выбора категории
