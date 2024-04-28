@@ -555,6 +555,35 @@ def change_order_position_quantity(call):
 def delete_order_position(call):
     pos_id = call.data.split("_")[1]
     # Здесь ваш код для удаления позиции
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute('Select order_id From order_positions where id=?', (pos_id,))
+    order_id = cur.fetchone()
+    if order_id:
+        order_id = order_id[0]
+
+    delete_order_position(pos_id, db_name='zero_order_service.db')
+    cur.execute('Select * From order_positions where order_id=?', (order_id,))
+    positions = cur.fetchall()
+    if positions:
+        markup = types.InlineKeyboardMarkup()
+        for id, order_id, dishes_id, count, temp_sum in positions:
+            button_text = f"{temp_sum} - {count} шт."
+            # Создаем кнопку для позиции
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
+            # Создаем кнопку для изменения количества
+            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
+            # Создаем кнопку для удаления позиции
+            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
+            # Добавляем кнопки в одной строке
+            markup.row(pos_button, change_button, delete_button)
+        # Добавляем кнопку "Назад к заказам"
+        back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
+        markup.add(back_button)
+        bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
+    else:
+        bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
+    conn.close()
     bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('myorders_back_'))
@@ -705,7 +734,7 @@ def delete_order_position(order_position_id, db_name='database.db'):
         cursor = conn.cursor()
 
         # Удаляем запись из таблицы Order_position по id
-        cursor.execute('DELETE FROM Order_position WHERE id = ?', (order_position_id,))
+        cursor.execute('DELETE FROM order_positions WHERE id = ?', (order_position_id,))
         conn.commit()
         if cursor.rowcount == 0:
             print("Запись не найдена.")
