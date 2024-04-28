@@ -3,6 +3,8 @@ import telebot
 from telebot import TeleBot, types
 from yookassa import Configuration, Payment
 
+temp_storage = {}
+
 # Конфигурация ЮKassa
 shop_id = '371138'
 secret_key = 'test_fo-_hU2Yy5bRR8GKE1K-B8hcGXWq4Jnf6fCIZrQPzHE'
@@ -387,8 +389,12 @@ def add_order_position(order_id, dishes_id, count):
     temp_sum = price1*count
     cur.execute("insert into order_positions (order_id, dishes_id, count, temp_sum) values(?,?,?,?)",
                 (order_id, dishes_id, count, temp_sum))
+    id = cur.fetchone()
+    if id:
+        id = id[0]
     conn.commit()
     conn.close()
+    return id
 
 # создание таблицы отзывов о блюде
 def create_table_feedback():
@@ -537,7 +543,10 @@ def order_position_select(call):
             markup.row(pos_button, change_button, delete_button)
         # Добавляем кнопку "Назад к заказам"
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
+        pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
         markup.add(back_button)
+        markup.add(pay_button)
+
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
@@ -571,6 +580,8 @@ def process_quantity_change(message, pos_id, call):
             markup.row(pos_button, change_button, delete_button)
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
         markup.add(back_button)
+        pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
+        markup.add(pay_button)
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
         conn.close()
         bot.answer_callback_query(call.id)
@@ -615,6 +626,8 @@ def delete_order_position(call):
         # Добавляем кнопку "Назад к заказам"
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
         markup.add(back_button)
+        pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
+        markup.add(pay_button)
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
@@ -679,24 +692,56 @@ def category_selected(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('product_'))
 def product_selected(call):
-    user_id = call.from_user.id  # Идентификатор пользователя в Telegram
-    product_id = call.data.split('_')[1]  # Извлечение ID продукта
+    global temp_storage
+    user_id = call.from_user.id
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute('SELECT id FROM Users WHERE user_id=?', (user_id,))
+    user_record = cur.fetchone()
+    if user_record:
+        user_record = user_record[0]
 
-    # Проверяем, есть ли уже начатый заказ для этого пользователя
-    order_id = add_order(user_id)  # Функция для получения или создания нового заказа
+    product_id = call.data.split('_')[1]
 
-    # Добавляем продукт в заказ
-    add_order_position(order_id, product_id, 1)  # Предполагаем, что добавляется 1 единица продукта
+    # Сохраняем выбранный продукт во временное хранилище (например, в словаре)
+    temp_storage[user_record] = {'product_id': product_id}
 
+    # Запрашиваем у пользователя количество
+    msg = bot.send_message(call.message.chat.id, "Введите количество товара, которое вы хотите добавить:")
+    bot.register_next_step_handler(msg, process_quantity, user_record, temp_storage, user_id)
     bot.answer_callback_query(call.id)
 
-    markup = types.InlineKeyboardMarkup()
-    finish_button = types.InlineKeyboardButton("Завершить заказ", callback_data='finish_order')
-    add_more_button = types.InlineKeyboardButton("Добавить товар", callback_data='new_order')
-    markup.add(add_more_button, finish_button)
+def process_quantity(message, user_record, temp_storage, user_id):
+    #temp_storage = {}
+    try:
+        quantity = int(message.text)  # Преобразуем введённое значение в число
+        if quantity <= 0:
+            raise ValueError("Количество должно быть больше нуля")
+    except ValueError:
+        bot.send_message(message.chat.id, "Пожалуйста, введите корректное число.")
+        return
+    if user_record in temp_storage:
+        product_id = temp_storage[user_record]['product_id']
+        order_id = add_order(user_id)  # Функция для получения или создания нового заказа
 
-    bot.send_message(call.message.chat.id, "Продукт добавлен в ваш заказ. Добавьте еще или завершите заказ."
-                     ,reply_markup = markup)
+        # Добавляем продукт в заказ с указанным количеством
+        add_order_position(order_id, product_id, quantity)
+
+        # Убираем информацию о продукте из временного хранилища
+        del temp_storage[user_record]
+
+        markup = types.InlineKeyboardMarkup()
+        finish_button = types.InlineKeyboardButton("Завершить заказ", callback_data='finish_order')
+        add_more_button = types.InlineKeyboardButton("Добавить товар", callback_data='new_order')
+        markup.add(add_more_button, finish_button)
+
+        bot.send_message(message.chat.id, "Продукт добавлен в ваш заказ. Добавьте еще или завершите заказ.",
+                         reply_markup=markup)
+    else:
+        bot.send_message(message.chat.id, "Произошла ошибка, попробуйте снова.")
+        return
+
+
 @bot.callback_query_handler(func=lambda call: call.data == 'add_more')
 def add_more_products(call):
     user_id = call.from_user.id
@@ -828,6 +873,24 @@ def create_payment(amount, currency, return_url, description):
     except Exception as e:
         print(f"Ошибка при создании платежа: {e}")
         return None
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("pay_order_"))
+def handle_payment(call):
+    order_id = call.data.split("_")[1]
+    chat_id = call.message.chat.id
+    amount = "10.00"  # Сумма к оплате, получите из данных заказа
+    currency = "RUB"
+    return_url = "https://your-return-url.com"  # URL, куда пользователь будет перенаправлен после оплаты
+    description = f"Оплата заказа №{order_id}"
+
+    payment = create_payment(amount, currency, return_url, description)
+    if payment:
+        # Перенаправляем пользователя на страницу оплаты
+        payment_url = payment.confirmation.get('confirmation_url')
+        bot.send_message(chat_id, f"Пожалуйста, перейдите по ссылке для оплаты: {payment_url}")
+    else:
+        bot.send_message(chat_id, "Произошла ошибка при создании платежа. Пожалуйста, попробуйте еще раз.")
+    bot.answer_callback_query(call.id)
 
 # ------  Начала кода примера оплаты
 # @bot.message_handler(commands=['start'])
