@@ -688,6 +688,42 @@ def go_back_to_order_positions(call):
         bot.send_message(call.message.chat.id, "У вас нет профиля в системе.")
         return
 
+    # отображение подробной информации о блюде при клике на кнопку "Подробнее"
+@bot.callback_query_handler(func=lambda call: call.data.startswith('product_'))
+def product_details(call):
+    product_id = call.data.split('_')[1]
+    conn = connect_to_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM dishes WHERE id=?', (product_id,))
+    product_info = cur.fetchone()
+    conn.close()
+
+    if product_info:
+        dish_id, name, price, image, category_id = product_info
+        response = f"Подробная информация о блюде:\nНазвание: {name}\nЦена: {price}\nКатегория ID: {category_id}"
+        bot.send_message(call.message.chat.id, response)
+    else:
+        bot.send_message(call.message.chat.id, "Информация о блюде недоступна.")
+
+        # просмотр отзывов по выбранному блюду при клике на кнопку "Отзывы"
+@bot.callback_query_handler(func=lambda call: call.data == 'reviews')
+def show_dish_reviews(call):
+    dish_id = call.data.split('_')[1]
+    conn = connect_to_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM feedback WHERE dishes=?', (dish_id,))
+    reviews = cur.fetchall()
+    conn.close()
+
+    if reviews:
+        for review in reviews:
+            _, dish_id, user_id, content, rating = review
+            bot.send_message(call.message.chat.id,
+            f"Отзыв пользователя {user_id}:\nОценка: {rating}\nОтзыв: {content}")
+    else:
+            bot.send_message(call.message.chat.id, "Отзывов пока нет.")
+
+
     # Получаем заказы пользователя
     cur.execute('Select id, user_id From Users where user_id=?', (user_id,))
     check1 = cur.fetchone()
