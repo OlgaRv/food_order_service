@@ -12,7 +12,7 @@ Configuration.account_id = shop_id
 Configuration.secret_key = secret_key
 
 # Токен бота
-TOKEN = '6788073016:AAH4FmcQlkVbkmFaCwt-Z9z0RwHd_q5ORBg'
+TOKEN = '6788073016:AAELeQLwR7HMYSPuPwzo2XapRFHJxD55NTw'
 bot = telebot.TeleBot(TOKEN)
 
 def create_db_and_table():
@@ -458,7 +458,7 @@ def send_welcome(message):
     itembtn1 = types.InlineKeyboardButton('Новый заказ', callback_data='new_order')
     itembtn2 = types.InlineKeyboardButton('Мои заказы', callback_data='my_orders')
     markup.add(itembtn1, itembtn2)
-    bot.send_message(message.chat.id, "Привет! Чем могу помочь?", reply_markup=markup)
+    bot.send_message(message.chat.id, f"Привет, {user_name}! Чем могу помочь?", reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: call.data == 'start_back')
@@ -545,12 +545,17 @@ def order_position_select(call):
     order_id = call.data.split("_")[1]
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
-    cur.execute('Select * From order_positions where order_id=?', (order_id,))
+    cur.execute('Select * '
+                'From order_positions as op '
+                'join dishes as dd '
+                'on op.dishes_id = dd.id '
+                'where op.order_id=?', (order_id,))
     positions = cur.fetchall()
     if positions:
         markup = types.InlineKeyboardMarkup()
-        for id, order_id, dishes_id, count, temp_sum in positions:
-            button_text = f"{temp_sum} - {count} шт."
+        for item in positions: #.id, op.order_id, op.dishes_id, op.count, op.temp_sum, dd.name in positions:
+            name = item[6]
+            button_text = f"{item[6]} {item[4]} - {item[3]} шт."
             # Создаем кнопку для позиции
             pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
             # Создаем кнопку для изменения количества
@@ -587,11 +592,17 @@ def process_quantity_change(message, pos_id, call):
         cur = conn.cursor()
         cur.execute('Select order_id From order_positions where id=?', (pos_id,))
         order_id = cur.fetchone()[0]
-        cur.execute('Select * From order_positions where order_id=?', (order_id,))
+        cur.execute('Select * '
+                    'From order_positions as op '
+                    'join dishes as dd '
+                    'on op.dishes_id = dd.id '
+                    'where op.order_id=?', (order_id,))
         positions = cur.fetchall()
-        markup = types.InlineKeyboardMarkup()
-        for id, order_id, dishes_id, count, temp_sum in positions:
-            button_text = f"{temp_sum} - {count} шт."
+        if positions:
+            markup = types.InlineKeyboardMarkup()
+            for item in positions:  # .id, op.order_id, op.dishes_id, op.count, op.temp_sum, dd.name in positions:
+                name = item[6]
+                button_text = f"{item[6]} {item[4]} - {item[3]} шт."
             pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
             change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
             delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
@@ -617,10 +628,10 @@ def update_order_position(pos_id, quantity, db_name):
     cur.execute("select price from dishes where id = ?", (dishes_id,))
     price = cur.fetchone()
     if price:
-        price = price[0]
-    temp_sum = price*quantity
+        price = int(price[0])
+    temp_sum = price * int(quantity)
     cur.execute("UPDATE order_positions SET count = ?, temp_sum = ? WHERE id = ?", (quantity, temp_sum, pos_id))
-
+    conn.commit()
     cur.execute('Select order_id from order_positions where id=?', (pos_id,))
     check3 = cur.fetchone()
     if check3:
@@ -649,12 +660,17 @@ def delete_order_position(call):
         order_id = order_id[0]
 
     delete_order_position(pos_id, db_name='zero_order_service.db')
-    cur.execute('Select * From order_positions where order_id=?', (order_id,))
+    cur.execute('Select * '
+                'From order_positions as op '
+                'join dishes as dd '
+                'on op.dishes_id = dd.id '
+                'where op.order_id=?', (order_id,))
     positions = cur.fetchall()
     if positions:
         markup = types.InlineKeyboardMarkup()
-        for id, order_id, dishes_id, count, temp_sum in positions:
-            button_text = f"{temp_sum} - {count} шт."
+        for item in positions:  # .id, op.order_id, op.dishes_id, op.count, op.temp_sum, dd.name in positions:
+            name = item[6]
+            button_text = f"{item[6]} {item[4]} - {item[3]} шт."
             # Создаем кнопку для позиции
             pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
             # Создаем кнопку для изменения количества
