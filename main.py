@@ -555,13 +555,13 @@ def order_position_select(call):
         markup = types.InlineKeyboardMarkup()
         for item in positions: #.id, op.order_id, op.dishes_id, op.count, op.temp_sum, dd.name in positions:
             name = item[6]
-            button_text = f"{item[6]} {item[4]} - {item[3]} шт."
+            button_text = f"{item[6]} - {item[3]} шт."
             # Создаем кнопку для позиции
-            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{item[0]}')
             # Создаем кнопку для изменения количества
-            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
+            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
             # Создаем кнопку для удаления позиции
-            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
+            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{item[0]}')
             # Добавляем кнопки в одной строке
             markup.row(pos_button, change_button, delete_button)
         # Добавляем кнопку "Назад к заказам"
@@ -602,11 +602,11 @@ def process_quantity_change(message, pos_id, call):
             markup = types.InlineKeyboardMarkup()
             for item in positions:  # .id, op.order_id, op.dishes_id, op.count, op.temp_sum, dd.name in positions:
                 name = item[6]
-                button_text = f"{item[6]} {item[4]} - {item[3]} шт."
-            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
-            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
-            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
-            markup.row(pos_button, change_button, delete_button)
+                button_text = f"{item[6]} - {item[3]} шт."
+                pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{item[0]}')
+                change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
+                delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{item[0]}')
+                markup.row(pos_button, change_button, delete_button)
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'myorders_back_{order_id}')
         markup.add(back_button)
         pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
@@ -670,13 +670,13 @@ def delete_order_position(call):
         markup = types.InlineKeyboardMarkup()
         for item in positions:  # .id, op.order_id, op.dishes_id, op.count, op.temp_sum, dd.name in positions:
             name = item[6]
-            button_text = f"{item[6]} {item[4]} - {item[3]} шт."
+            button_text = f"{item[6]} - {item[3]} шт."
             # Создаем кнопку для позиции
-            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{id}')
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'pos_{item[0]}')
             # Создаем кнопку для изменения количества
-            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{id}')
+            change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
             # Создаем кнопку для удаления позиции
-            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{id}')
+            delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{item[0]}')
             # Добавляем кнопки в одной строке
             markup.row(pos_button, change_button, delete_button)
         # Добавляем кнопку "Назад к заказам"
