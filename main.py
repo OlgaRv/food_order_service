@@ -174,12 +174,40 @@ def create_table_users():
         discount FLOAT,
         user_role INTEGER,
         user_id INTEGER,
+        view_order_id INTEGER,
+        view_category_id INTEGER,
+        view_product_id INTEGER,
+        FOREIGN KEY(view_order_id) REFERENCES orders(id),
+        FOREIGN KEY(view_product_id) REFERENCES products(id),
+        FOREIGN KEY(view_category_id) REFERENCES Category_dishes(id),
         FOREIGN KEY(user_role) REFERENCES User_role(id)
     )
     ''')
     conn.commit()
     conn.close()
 
+def alter_user_table():
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+    cur.execute("ALTER TABLE Users ADD view_order_id INTEGER")
+    conn.commit()
+    cur.execute("ALTER TABLE Users ADD view_category_id INTEGER")
+    conn.commit()
+    cur.execute("ALTER TABLE Users ADD view_product_id INTEGER")
+    conn.commit()
+    cur.execute("ALTER TABLE Users ADD CONSTRAINT v_o_i FOREIGN KEY(view_order_id) REFERENCES orders(id)")
+    conn.commit()
+    cur.execute('''
+           ALTER TABLE Users
+           ADD CONSTRAINT v_p_i FOREIGN KEY(view_product_id) REFERENCES products(id)
+       ''')
+    conn.commit()
+    cur.execute('''
+           ALTER TABLE Users
+           ADD CONSTRAINT v_c_i FOREIGN KEY(view_category_id) REFERENCES Category_dishes(id)
+       ''')
+    conn.commit()
+    conn.close()
 def create_table_category():
     # Создаём базу данных
     conn = sqlite3.connect('zero_order_service.db')
@@ -557,7 +585,7 @@ def order_position_select(call):
             name = item[6]
             button_text = f"{item[6]} - {item[3]} шт."
             # Создаем кнопку для позиции
-            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'product_{item[0]}')
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'productinfo_{item[2]}')
             # Создаем кнопку для изменения количества
             change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
             # Создаем кнопку для удаления позиции
@@ -603,7 +631,7 @@ def process_quantity_change(message, pos_id, call):
             for item in positions:  # .id, op.order_id, op.dishes_id, op.count, op.temp_sum, dd.name in positions:
                 name = item[6]
                 button_text = f"{item[6]} - {item[3]} шт."
-                pos_button = types.InlineKeyboardButton(button_text, callback_data=f'product_{item[0]}')
+                pos_button = types.InlineKeyboardButton(button_text, callback_data=f'productinfo_{item[2]}')
                 change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
                 delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{item[0]}')
                 markup.row(pos_button, change_button, delete_button)
@@ -672,7 +700,7 @@ def delete_order_position(call):
             name = item[6]
             button_text = f"{item[6]} - {item[3]} шт."
             # Создаем кнопку для позиции
-            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'product_{item[0]}')
+            pos_button = types.InlineKeyboardButton(button_text, callback_data=f'productinfo_{item[2]}')
             # Создаем кнопку для изменения количества
             change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
             # Создаем кнопку для удаления позиции
@@ -705,19 +733,28 @@ def go_back_to_order_positions(call):
         return
 
     # отображение подробной информации о блюде при клике на кнопку "Подробнее"
-@bot.callback_query_handler(func=lambda call: call.data.startswith('product_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith('productinfo_'))
 def product_details(call):
     product_id = call.data.split('_')[1]
     conn = connect_to_db()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM dishes WHERE id=?', (product_id,))
+    cur.execute('SELECT d.id, d.name, d.price, d.image, cd.category_name FROM dishes as d '
+                'JOIN Category_dishes as cd ON d.category_id = cd.id '
+                'WHERE d.id=?', (product_id,))
     product_info = cur.fetchone()
     conn.close()
 
     if product_info:
-        dish_id, name, price, image, category_id = product_info
-        response = f"Подробная информация о блюде:\nНазвание: {name}\nЦена: {price}\nКатегория ID: {category_id}"
+        # Обновленный порядок переменных в соответствии с новым запросом
+        dish_id, name, price, image, category_name = product_info
+        # Использование названия категории вместо ID
+        response = f"Подробная информация о блюде:\nНазвание: {name}\nЦена: {price}\nКатегория: {category_name}"
         bot.send_message(call.message.chat.id, response)
+        if image:
+            # Отправка изображения
+            bot.send_photo(call.message.chat.id, image)
+        else:
+            bot.send_message(call.message.chat.id, "Изображение блюда недоступно.")
     else:
         bot.send_message(call.message.chat.id, "Информация о блюде недоступна.")
 
@@ -1025,6 +1062,7 @@ create_table_orders()
 create_table_order_position()
 create_table_feedback()
 add_user_role()
+#alter_user_table()
 
 #add_dishes(Category, name, price, image)
 #user_change(user_name, phone, address)
