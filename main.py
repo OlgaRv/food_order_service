@@ -571,6 +571,11 @@ def handle_query(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('myorder_'))
 def order_position_select(call):
     order_id = call.data.split("_")[1]
+    conn = connect_to_db()
+    cur = conn.cursor()
+    cur.execute('UPDATE Users SET view_order_id = ?', (order_id,))
+    conn.commit()
+    conn.close()
     conn = sqlite3.connect('zero_order_service.db')
     cur = conn.cursor()
     cur.execute('Select * '
@@ -812,6 +817,11 @@ def show_dish_reviews(call):
 def category_selected(call):
     # Извлекаем ID категории из callback_data
     category_id = call.data.split('_')[1]
+    conn = connect_to_db()
+    cur = conn.cursor()
+    cur.execute('UPDATE Users SET view_category_id = ?', (category_id,))
+    conn.commit()
+    conn.close()
     #bot.send_message(call.message.chat.id, f"выбран id {category_id}")
     products = get_products_by_category(category_id)
     markup = types.InlineKeyboardMarkup()
@@ -834,6 +844,11 @@ def product_selected(call):
         user_record = user_record[0]
 
     product_id = call.data.split('_')[1]
+    conn = connect_to_db()
+    cur = conn.cursor()
+    cur.execute('UPDATE Users SET view_product_id = ?', (product_id,))
+    conn.commit()
+    conn.close()
 
     # Сохраняем выбранный продукт во временное хранилище (например, в словаре)
     temp_storage[user_record] = {'product_id': product_id}
