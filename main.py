@@ -527,6 +527,8 @@ def handle_query(call):
         for category_id, category_name in categories:
             callback_data = f'category_{category_id}'
             markup.add(types.InlineKeyboardButton(category_name, callback_data=callback_data))
+        back_button = types.InlineKeyboardButton("Назад к выбору", callback_data=f'start_back')
+        markup.add(back_button)
         bot.send_message(call.message.chat.id, "Выберите категорию:", reply_markup=markup)
     elif call.data == 'my_orders':
         # Обработка выбора "Мои заказы"
@@ -882,6 +884,8 @@ def category_selected(call):
         button_text = f'{product_name}: {price} руб.'
         callback_data = f'product_{product_id}'
         markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
+    back_button = types.InlineKeyboardButton("Назад к категориям", callback_data=f'new_order')
+    markup.add(back_button)
     bot.send_message(call.message.chat.id, "Выберите продукт:", reply_markup=markup)
     bot.answer_callback_query(call.id)
 
