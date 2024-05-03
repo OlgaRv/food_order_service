@@ -888,14 +888,35 @@ def category_selected(call):
     markup = types.InlineKeyboardMarkup()
     # Добавляем кнопки для каждого продукта
     for product_id, product_name, price in products:
-        button_text = f'{product_name}: {price} руб.'
-        callback_data = f'product_{product_id}'
-        markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
-    back_button = types.InlineKeyboardButton("Назад к категориям", callback_data=f'new_order')
-    markup.add(back_button)
-    bot.send_message(call.message.chat.id, "Выберите продукт:", reply_markup=markup)
-    bot.answer_callback_query(call.id)
+    #     button_text = f'{product_name}: {price} руб.'
+    #     callback_data = f'product_{product_id}'
+    #     markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
+    # back_button = types.InlineKeyboardButton("Назад к категориям", callback_data=f'new_order')
+    # markup.add(back_button)
+    # bot.send_message(call.message.chat.id, "Выберите продукт:", reply_markup=markup)
+    # bot.answer_callback_query(call.id)
+    # Кнопка для добавления товара в корзину
+        add_button_text = f'{product_name}: {price} руб.'
+        add_callback_data = f'product_{product_id}'
+        add_button = types.InlineKeyboardButton(add_button_text, callback_data=add_callback_data)
 
+    # Кнопка для просмотра подробной информации о товаре
+        detail_button_text = 'Подробнее'
+        detail_callback_data = f'detail_product_{product_id}'
+        detail_button = types.InlineKeyboardButton(detail_button_text, callback_data=detail_callback_data)
+
+    # Кнопка для добавления отзыва
+        review_button_text = 'Отзыв'
+        review_callback_data = f'review_product_{product_id}'
+        review_button = types.InlineKeyboardButton(review_button_text, callback_data=review_callback_data)
+
+    # Добавляем кнопки в ряд
+        markup.row(add_button, detail_button, review_button)
+
+    back_button = types.InlineKeyboardButton("Назад к категориям", callback_data='new_order')
+    markup.add(back_button)
+    bot.send_message(call.message.chat.id, "Выберите продукт или действие:", reply_markup=markup)
+    bot.answer_callback_query(call.id)
 @bot.callback_query_handler(func=lambda call: call.data.startswith('product_'))
 def product_selected(call):
     global temp_storage
