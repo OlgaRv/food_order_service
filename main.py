@@ -421,7 +421,15 @@ def add_order_position(order_id, dishes_id, count):
     if id:
         id = id[0]
     conn.commit()
+
+    cur.execute("SELECT SUM(temp_sum) FROM order_positions WHERE order_id = ?", (order_id,))
+    summa = cur.fetchone()
+    if summa:
+        summa = summa[0]
+    cur.execute('UPDATE orders SET sum = ? WHERE id = ?', (summa, order_id))
+    conn.commit()
     conn.close()
+
     return id
 
 # создание таблицы отзывов о блюде
@@ -573,10 +581,11 @@ def handle_query(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('myorder_'))
 def order_position_select(call):
     order_id = call.data.split("_")[1]
+    user_id = call.from_user.id
     #order_id = int(order_id[0])
     conn = connect_to_db()
     cur = conn.cursor()
-    cur.execute('UPDATE Users SET view_order_id = ?', (order_id,))
+    cur.execute('UPDATE Users SET view_order_id = ? Where user_id = ?', (order_id, user_id))
     conn.commit()
 
     cur.execute('Select * '
@@ -663,6 +672,7 @@ def process_quantity_change(message, pos_id, call):
 
 
 def update_order_position(pos_id, quantity, db_name):
+
     conn = sqlite3.connect(db_name)
     cur = conn.cursor()
     cur.execute("select dishes_id from order_positions where id = ?", (pos_id,))
@@ -734,7 +744,15 @@ def delete_order_position(call):
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
+
+    cur.execute("SELECT SUM(temp_sum) FROM order_positions WHERE order_id = ?", (order_id,))
+    summa = cur.fetchone()
+    if summa:
+        summa = summa[0]
+    cur.execute('UPDATE orders SET sum = ? WHERE id = ?', (summa, order_id))
+    conn.commit()
     conn.close()
+
     bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('myorders_back_'))
@@ -934,9 +952,10 @@ def show_dish_reviews(call):
 def category_selected(call):
     # Извлекаем ID категории из callback_data
     category_id = call.data.split('_')[1]
+    user_id = call.from_user.id
     conn = connect_to_db()
     cur = conn.cursor()
-    cur.execute('UPDATE Users SET view_category_id = ?', (category_id,))
+    cur.execute('UPDATE Users SET view_category_id = ? Where user_id = ?', (category_id, user_id))
     conn.commit()
     conn.close()
     #bot.send_message(call.message.chat.id, f"выбран id {category_id}")
@@ -987,7 +1006,7 @@ def product_selected(call):
     product_id = call.data.split('_')[1]
     conn = connect_to_db()
     cur = conn.cursor()
-    cur.execute('UPDATE Users SET view_product_id = ?', (product_id,))
+    cur.execute('UPDATE Users SET view_product_id = ? where user_id = ?', (product_id, user_id))
     conn.commit()
     conn.close()
 
@@ -1011,6 +1030,8 @@ def process_quantity(message, user_record, temp_storage, user_id):
     if user_record in temp_storage:
         product_id = temp_storage[user_record]['product_id']
         order_id = add_order(user_id)  # Функция для получения или создания нового заказа
+
+
 
         # Добавляем продукт в заказ с указанным количеством
         add_order_position(order_id, product_id, quantity)
