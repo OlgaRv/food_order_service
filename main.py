@@ -825,7 +825,40 @@ def product_details(call):
         bot.answer_callback_query(call.id)
 
         # просмотр отзывов по выбранному блюду при клике на кнопку "Отзывы"
-@bot.callback_query_handler(func=lambda call: call.data == 'reviews')
+
+
+# Обработчик нажатия на кнопку "Отзыв"
+@bot.callback_query_handler(func=lambda call: call.data.startswith('givereview_'))
+def handle_review_button(call):
+    product_id = call.data.split('_')[1]
+    msg = bot.send_message(call.message.chat.id, "Пожалуйста, напишите ваш отзыв о товаре:")
+    bot.register_next_step_handler(msg, process_review_text, product_id)
+
+def process_review_text(message, product_id):
+    review_text = message.text
+    user_id = message.from_user.id
+    msg = bot.send_message(message.chat.id, "Пожалуйста, оцените товар от 1 до 5:")
+    bot.register_next_step_handler(msg, process_review_rating, product_id, user_id, review_text)
+
+def process_review_rating(message, product_id, user_id, review_text):
+    review_rating = message.text
+    conn = sqlite3.connect('zero_order_service.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO feedback (user, dishes, content, rating) VALUES (?, ?, ?, ?)', (user_id, product_id, review_text, review_rating))
+    conn.commit()
+    cursor.execute('select category_id from dishes where id = ?', (product_id,))
+    category_id = cursor.fetchone()[0]
+    conn.close()
+    markup = types.InlineKeyboardMarkup()
+    itembtn1 = types.InlineKeyboardButton('Назад', callback_data=f'category_{category_id}')
+    markup.add(itembtn1)
+    bot.send_message(message.chat.id, "Спасибо за ваш отзыв!", reply_markup=markup)
+
+
+    #bot.send_message("Спасибо за ваш отзыв!", call.message.chat.id, call.message.message_id,reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('viewreviews_'))
 def show_dish_reviews(call):
     dish_id = call.data.split('_')[1]
     conn = connect_to_db()
@@ -907,13 +940,13 @@ def category_selected(call):
 
     # Кнопка для добавления отзыва
         review_button_text = 'Отзыв'
-        review_callback_data = f'review_product_{product_id}'
+        review_callback_data = f'givereview_{product_id}'
         review_button = types.InlineKeyboardButton(review_button_text, callback_data=review_callback_data)
 
     # Добавляем кнопки в ряд
         markup.row(add_button, detail_button, review_button)
 
-    back_button = types.InlineKeyboardButton("Назад к категориям", callback_data=f'category_{category_id}')
+    back_button = types.InlineKeyboardButton("Назад к категориям", callback_data=f'new_order')
     markup.add(back_button)
     bot.send_message(call.message.chat.id, "Выберите продукт или действие:", reply_markup=markup)
     bot.answer_callback_query(call.id)
