@@ -604,6 +604,8 @@ def order_position_select(call):
         pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
         markup.add(back_button)
         markup.add(pay_button)
+        del_button = types.InlineKeyboardButton("Удалить заказ", callback_data=f'deleteorder')
+        markup.add(del_button)
 
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
@@ -647,6 +649,8 @@ def process_quantity_change(message, pos_id, call):
         markup.add(back_button)
         pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
         markup.add(pay_button)
+        del_button = types.InlineKeyboardButton("Удалить заказ", callback_data=f'deleteorder')
+        markup.add(del_button)
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
         conn.close()
         bot.answer_callback_query(call.id)
@@ -720,6 +724,8 @@ def delete_order_position(call):
         markup.add(back_button)
         pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
         markup.add(pay_button)
+        del_button = types.InlineKeyboardButton("Удалить заказ", callback_data='deleteorder')
+        markup.add(del_button)
         bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
@@ -768,7 +774,8 @@ def go_back_to_order_positions(call):
     pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
     markup.add(back_button)
     markup.add(pay_button)
-
+    del_button = types.InlineKeyboardButton("Удалить заказ", callback_data='deleteorder')
+    markup.add(del_button)
     bot.send_message(call.message.chat.id, "Позиции в Вашем заказе:", reply_markup=markup)
 
     # отображение подробной информации о блюде при клике на кнопку "Подробнее"
@@ -1165,6 +1172,42 @@ def handle_payment(call):
 #     else:
 #         bot.send_message(message.chat.id, "Не удалось создать платеж, пожалуйста, попробуйте позже.")
 # ------ Конец код примера оплаты
+
+@bot.callback_query_handler(func=lambda call: call.data == 'deleteorder')
+def delete_order(call):
+    user_id = call.from_user.id
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
+
+    try:
+        # Получаем view_order_id пользователя
+        cur.execute('SELECT view_order_id FROM Users WHERE user_id = ?', (user_id,))
+        view_order_id = cur.fetchone()[0]
+
+        if view_order_id:
+            # Удаляем все позиции заказа
+            cur.execute('DELETE FROM order_positions WHERE order_id = ?', (view_order_id,))
+            conn.commit()
+
+            # Удаляем заказ
+            cur.execute('DELETE FROM orders WHERE id = ?', (view_order_id,))
+            conn.commit()
+
+            # Отправляем пользователя назад к списку его заказов
+            bot.answer_callback_query(call.id, "Заказ удален")
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Заказ был удален.")
+            bot.callback_query_handler(func=lambda call: call.data == 'my_orders')(call)
+        else:
+            bot.answer_callback_query(call.id, "Не найден активный заказ для удаления.")
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        bot.answer_callback_query(call.id, "Произошла ошибка при удалении заказа.")
+    finally:
+        cur.close()
+        conn.close()
+
+
+
 
 create_db_and_table()
 create_table_users()
