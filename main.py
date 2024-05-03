@@ -598,7 +598,9 @@ def order_position_select(call):
             # Создаем кнопку для удаления позиции
             delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{item[0]}')
             # Добавляем кнопки в одной строке
-            markup.row(pos_button, change_button, delete_button)
+            review_button = types.InlineKeyboardButton("Оценить", callback_data=f'givereview_{item[0]}')
+            # Добавляем кнопки в одной строке
+            markup.row(pos_button, change_button, delete_button, review_button)
         # Добавляем кнопку "Назад к заказам"
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'my_orders')
         pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
@@ -644,7 +646,9 @@ def process_quantity_change(message, pos_id, call):
                 pos_button = types.InlineKeyboardButton(button_text, callback_data=f'productinfo_{item[2]}')
                 change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
                 delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{item[0]}')
-                markup.row(pos_button, change_button, delete_button)
+                review_button = types.InlineKeyboardButton("Оценить", callback_data=f'givereview_{item[0]}')
+                # Добавляем кнопки в одной строке
+                markup.row(pos_button, change_button, delete_button, review_button)
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'my_orders')
         markup.add(back_button)
         pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
@@ -717,8 +721,9 @@ def delete_order_position(call):
             change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
             # Создаем кнопку для удаления позиции
             delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{item[0]}')
+            review_button = types.InlineKeyboardButton("Оценить", callback_data=f'givereview_{item[0]}')
             # Добавляем кнопки в одной строке
-            markup.row(pos_button, change_button, delete_button)
+            markup.row(pos_button, change_button, delete_button, review_button)
         # Добавляем кнопку "Назад к заказам"
         back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'my_orders')
         markup.add(back_button)
@@ -767,8 +772,9 @@ def go_back_to_order_positions(call):
         change_button = types.InlineKeyboardButton("Изменить", callback_data=f'change_{item[0]}')
         # Создаем кнопку для удаления позиции
         delete_button = types.InlineKeyboardButton("Удалить", callback_data=f'delete_{item[0]}')
+        review_button = types.InlineKeyboardButton("Оценить", callback_data=f'givereview_{item[0]}')
         # Добавляем кнопки в одной строке
-        markup.row(pos_button, change_button, delete_button)
+        markup.row(pos_button, change_button, delete_button, review_button)
     # Добавляем кнопку "Назад к заказам"
     back_button = types.InlineKeyboardButton("Назад к заказам", callback_data=f'my_orders')
     pay_button = types.InlineKeyboardButton("Оплатить заказ", callback_data=f'pay_order_{order_id}')
@@ -844,9 +850,11 @@ def process_review_rating(message, product_id, user_id, review_text):
     review_rating = message.text
     conn = sqlite3.connect('zero_order_service.db')
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO feedback (user, dishes, content, rating) VALUES (?, ?, ?, ?)', (user_id, product_id, review_text, review_rating))
+    cursor.execute('select dishes_id from order_positions where id = ?', (product_id,))
+    dishes_id = cursor.fetchone()[0]
+    cursor.execute('INSERT INTO feedback (user, dishes, content, rating) VALUES (?, ?, ?, ?)', (user_id, dishes_id, review_text, review_rating))
     conn.commit()
-    cursor.execute('select category_id from dishes where id = ?', (product_id,))
+    cursor.execute('select category_id from dishes where id = ?', (dishes_id,))
     category_id = cursor.fetchone()[0]
     conn.close()
     markup = types.InlineKeyboardMarkup()
@@ -858,52 +866,67 @@ def process_review_rating(message, product_id, user_id, review_text):
     #bot.send_message("Спасибо за ваш отзыв!", call.message.chat.id, call.message.message_id,reply_markup=markup)
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('viewreviews_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith('viewreview_'))
 def show_dish_reviews(call):
     dish_id = call.data.split('_')[1]
     conn = connect_to_db()
     cur = conn.cursor()
     cur.execute('SELECT * FROM feedback WHERE dishes=?', (dish_id,))
     reviews = cur.fetchall()
+    conn.commit()
     conn.close()
+
+    conn = sqlite3.connect('zero_order_service.db')
+    cursor = conn.cursor()
+    # cursor.execute('INSERT INTO feedback (user, dishes, content, rating) VALUES (?, ?, ?, ?)',
+    #                (user_id, product_id, review_text, review_rating))
+    # conn.commit()
+    cursor.execute('select category_id from dishes where id = ?', (dish_id,))
+    category_id = cursor.fetchone()[0]
+    conn.close()
+    markup = types.InlineKeyboardMarkup()
+    itembtn1 = types.InlineKeyboardButton('Назад', callback_data=f'category_{category_id}')
+    markup.add(itembtn1)
 
     if reviews:
         for review in reviews:
             _, dish_id, user_id, content, rating = review
             bot.send_message(call.message.chat.id,
             f"Отзыв пользователя {user_id}:\nОценка: {rating}\nОтзыв: {content}")
+        bot.send_message(call.message.chat.id, "Других отзывов пока нет!", reply_markup=markup)
     else:
-            bot.send_message(call.message.chat.id, "Отзывов пока нет.")
+        bot.send_message(call.message.chat.id, "Отзывов пока нет.", reply_markup=markup)
 
 
-    # Получаем заказы пользователя
-    cur.execute('Select id, user_id From Users where user_id=?', (user_id,))
-    check1 = cur.fetchone()
-    if check1:
-        check1 = check1[0]  # определили id юзера с данным user_id
-    else:
-        print("Нет такого юзера")
-
-    cur.execute('SELECT * FROM Orders WHERE user_id=?', (check1,))
-    list_of_orders = cur.fetchall()
-
-    if list_of_orders:
-        markup = types.InlineKeyboardMarkup()
-        for order_id, _, sum, _, order_name in list_of_orders:
-            callback_data = f'myorder_{order_id}'
-            button_text = f"от {order_name} на {sum} руб."
-            markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
-        back_button = types.InlineKeyboardButton("Назад к выбору", callback_data=f'start_back')
-        markup.add(back_button)
-        bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
-    else:
-        bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
-
-    bot.answer_callback_query(call.id)  # Ответ на callback_query
-
-    conn.close()  # Не забудьте закрыть соединение с базой данных
-
-    #bot.answer_callback_query(call.id)
+    #
+    # # Получаем заказы пользователя
+    # cur.execute('Select id, user_id From Users where user_id=?', (user_id,))
+    # check1 = cur.fetchone()
+    # if check1:
+    #     check1 = check1[0]  # определили id юзера с данным user_id
+    # else:
+    #     print("Нет такого юзера")
+    #
+    # cur.execute('SELECT * FROM Orders WHERE user_id=?', (check1,))
+    # list_of_orders = cur.fetchall()
+    #
+    # if list_of_orders:
+    #     markup = types.InlineKeyboardMarkup()
+    #     for order_id, _, sum, _, order_name in list_of_orders:
+    #         callback_data = f'myorder_{order_id}'
+    #         button_text = f"от {order_name} на {sum} руб."
+    #         markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
+    #     back_button = types.InlineKeyboardButton("Назад к выбору", callback_data=f'start_back')
+    #     markup.add(back_button)
+    #     bot.send_message(call.message.chat.id, "Ваши заказы:", reply_markup=markup)
+    # else:
+    #     bot.send_message(call.message.chat.id, "У вас нет активных заказов.")
+    #
+    # bot.answer_callback_query(call.id)  # Ответ на callback_query
+    #
+    # conn.close()  # Не забудьте закрыть соединение с базой данных
+    #
+    # #bot.answer_callback_query(call.id)
 
 # Обработка выбора категории
 # Обработка выбора категории
@@ -940,7 +963,7 @@ def category_selected(call):
 
     # Кнопка для добавления отзыва
         review_button_text = 'Отзыв'
-        review_callback_data = f'givereview_{product_id}'
+        review_callback_data = f'viewreview_{product_id}'
         review_button = types.InlineKeyboardButton(review_button_text, callback_data=review_callback_data)
 
     # Добавляем кнопки в ряд
