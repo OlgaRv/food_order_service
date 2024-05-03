@@ -934,8 +934,31 @@ def process_quantity(message, user_record, temp_storage, user_id):
         finish_button = types.InlineKeyboardButton("Завершить заказ", callback_data='finish_order')
         add_more_button = types.InlineKeyboardButton("Добавить товар", callback_data='new_order')
         markup.add(add_more_button, finish_button)
+        #user_id = call.from_user.id
+        conn = sqlite3.connect('zero_order_service.db')
+        cur = conn.cursor()
+        cur.execute('SELECT id, view_order_id FROM Users WHERE user_id=?', (user_id,))
+        user_record = cur.fetchone()
+        if user_record:
+            user_record = user_record[0]
+        #    order_id = user_record[1]
+        cur.execute('Select * '
+                    'From order_positions as op '
+                    'join dishes as dd '
+                    'on op.dishes_id = dd.id '
+                    'where op.order_id=?', (order_id,))
+        conn.commit()
+        positions = cur.fetchall()
+        message_text = ""
+        if positions:
+            for item in positions:  # .id, op.order_id, op.dishes_id, op.count, op.temp_sum, dd.name in positions:
+                name = item[6]
+                message_text = message_text + f"{item[6]} - {item[3]} шт. \n"
 
-        bot.send_message(message.chat.id, "Продукт добавлен в ваш заказ. Добавьте еще или завершите заказ.",
+
+
+        bot.send_message(message.chat.id, f"Продукт добавлен в ваш заказ. Сейчас в заказе: \n {message_text}")
+        bot.send_message(message.chat.id, "Добавьте еще или завершите заказ.",
                          reply_markup=markup)
     else:
         bot.send_message(message.chat.id, "Произошла ошибка, попробуйте снова.")
