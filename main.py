@@ -878,9 +878,10 @@ def category_selected(call):
     products = get_products_by_category(category_id)
     markup = types.InlineKeyboardMarkup()
     # Добавляем кнопки для каждого продукта
-    for product_id, product_name in products:
+    for product_id, product_name, price in products:
+        button_text = f'{product_name}: {price} руб.'
         callback_data = f'product_{product_id}'
-        markup.add(types.InlineKeyboardButton(product_name, callback_data=callback_data))
+        markup.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
     bot.send_message(call.message.chat.id, "Выберите продукт:", reply_markup=markup)
     bot.answer_callback_query(call.id)
 
@@ -1005,7 +1006,7 @@ def complete_order(user_id):
 def get_products_by_category(category_id):
     conn = connect_to_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name FROM dishes WHERE category_id=?",(category_id,))
+    cursor.execute("SELECT id, name, price FROM dishes WHERE category_id=?",(category_id,))
     products = cursor.fetchall()
     conn.close()
     return products
@@ -1079,21 +1080,39 @@ def create_payment(amount, currency, return_url, description):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pay_order_"))
 def handle_payment(call):
-    order_id = call.data.split("_")[1]
-    chat_id = call.message.chat.id
-    amount = "10.00"  # Сумма к оплате, получите из данных заказа
-    currency = "RUB"
-    return_url = "https://your-return-url.com"  # URL, куда пользователь будет перенаправлен после оплаты
-    description = f"Оплата заказа №{order_id}"
+    conn = sqlite3.connect('zero_order_service.db')
+    cur = conn.cursor()
 
-    payment = create_payment(amount, currency, return_url, description)
-    if payment:
-        # Перенаправляем пользователя на страницу оплаты
-        payment_url = payment.confirmation.get('confirmation_url')
-        bot.send_message(chat_id, f"Пожалуйста, перейдите по ссылке для оплаты: {payment_url}")
-    else:
-        bot.send_message(chat_id, "Произошла ошибка при создании платежа. Пожалуйста, попробуйте еще раз.")
+    user_id = call.from_user.id
+    cur.execute('SELECT view_order_id FROM Users WHERE user_id=?', (user_id,))
+    order_id = cur.fetchone()
+    if order_id:
+        order_id = order_id[0]
+    conn.commit()
+
+
+    markup = types.InlineKeyboardMarkup()
+    itembtn1 = types.InlineKeyboardButton('Нзад', callback_data=f'myorder_{order_id}')
+    markup.add(itembtn1)
+    bot.send_message(call.message.chat.id, "Оплата только наличными при получении.", reply_markup=markup)
     bot.answer_callback_query(call.id)
+
+#def handle_payment(call):
+    # order_id = call.data.split("_")[1]
+    # chat_id = call.message.chat.id
+    # amount = "10.00"  # Сумма к оплате, получите из данных заказа
+    # currency = "RUB"
+    # return_url = "https://your-return-url.com"  # URL, куда пользователь будет перенаправлен после оплаты
+    # description = f"Оплата заказа №{order_id}"
+    #
+    # payment = create_payment(amount, currency, return_url, description)
+    # if payment:
+    #     # Перенаправляем пользователя на страницу оплаты
+    #     payment_url = payment.confirmation.get('confirmation_url')
+    #     bot.send_message(chat_id, f"Пожалуйста, перейдите по ссылке для оплаты: {payment_url}")
+    # else:
+    #     bot.send_message(chat_id, "Произошла ошибка при создании платежа. Пожалуйста, попробуйте еще раз.")
+    # bot.answer_callback_query(call.id)
 
 # ------  Начала кода примера оплаты
 # @bot.message_handler(commands=['start'])
