@@ -902,7 +902,7 @@ def category_selected(call):
 
     # Кнопка для просмотра подробной информации о товаре
         detail_button_text = 'Подробнее'
-        detail_callback_data = f'detail_product_{product_id}'
+        detail_callback_data = f'productinfostart_{product_id}'
         detail_button = types.InlineKeyboardButton(detail_button_text, callback_data=detail_callback_data)
 
     # Кнопка для добавления отзыва
@@ -913,7 +913,7 @@ def category_selected(call):
     # Добавляем кнопки в ряд
         markup.row(add_button, detail_button, review_button)
 
-    back_button = types.InlineKeyboardButton("Назад к категориям", callback_data='new_order')
+    back_button = types.InlineKeyboardButton("Назад к категориям", callback_data=f'category_{category_id}')
     markup.add(back_button)
     bot.send_message(call.message.chat.id, "Выберите продукт или действие:", reply_markup=markup)
     bot.answer_callback_query(call.id)
@@ -1228,6 +1228,58 @@ def delete_order(call):
         cur.close()
         conn.close()
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith('productinfostart_'))
+def product_details(call):
+    product_id = call.data.split('_')[1]
+    user_id = call.from_user.id
+    conn = connect_to_db()
+    cur = conn.cursor()
+    cur.execute('SELECT view_category_id FROM Users WHERE user_id=?', (user_id,))
+    category_id = cur.fetchone()
+    if category_id:
+        category_id = category_id[0]
+    conn.commit()
+
+
+    cur.execute('SELECT d.id, d.name, d.price, d.image, cd.category_name FROM dishes as d '
+                'JOIN Category_dishes as cd ON d.category_id = cd.id '
+                'WHERE d.id=?', (product_id,))
+    product_info = cur.fetchone()
+    conn.commit()
+    user_id = call.from_user.id
+    cur.execute('SELECT view_order_id FROM Users WHERE user_id=?', (user_id,))
+    order_id = cur.fetchone()
+    if order_id:
+        order_id = order_id[0]
+    conn.commit()
+
+    conn.close()
+
+    if product_info:
+        # Обновленный порядок переменных в соответствии с новым запросом
+        dish_id, name, price, image, category_name = product_info
+        # Использование названия категории вместо ID
+        response = f"Подробная информация о блюде:\nНазвание: {name}\nЦена: {price}\nКатегория: {category_name}"
+        if image:
+            # Отправка изображения
+            bot.send_photo(call.message.chat.id, image)
+            markup = types.InlineKeyboardMarkup()
+            itembtn1 = types.InlineKeyboardButton('Нзад', callback_data=f'category_{category_id}')
+            markup.add(itembtn1)
+            bot.send_message(call.message.chat.id, response, reply_markup=markup)
+            bot.answer_callback_query(call.id)
+        else:
+            markup = types.InlineKeyboardMarkup()
+            itembtn1 = types.InlineKeyboardButton('Нзад', callback_data=f'category_{category_id}')
+            markup.add(itembtn1)
+            bot.send_message(call.message.chat.id, response, reply_markup=markup)
+            bot.answer_callback_query(call.id)
+    else:
+        markup = types.InlineKeyboardMarkup()
+        itembtn1 = types.InlineKeyboardButton('Нзад', callback_data=f'myorder_{order_id}')
+        markup.add(itembtn1)
+        bot.send_message(call.message.chat.id, "Информация о блюде недоступна.", reply_markup=markup)
+        bot.answer_callback_query(call.id)
 
 
 
