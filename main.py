@@ -1195,8 +1195,9 @@ def delete_order(call):
 
             # Отправляем пользователя назад к списку его заказов
             bot.answer_callback_query(call.id, "Заказ удален")
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Заказ был удален.")
-            bot.callback_query_handler(func=lambda call: call.data == 'my_orders')(call)
+            # Установите значение 'my_orders' для call.data
+            call.data = 'my_orders'  # Изменяем data для соответствия условиям вызова handle_query
+            handle_query(call)  # Вызываем функцию напрямую с измененным call
         else:
             bot.answer_callback_query(call.id, "Не найден активный заказ для удаления.")
     except Exception as e:
